@@ -17,39 +17,27 @@
 
 package org.apache.dolphinscheduler.common.utils;
 
-import org.apache.dolphinscheduler.common.constants.DateConstants;
-import org.apache.dolphinscheduler.common.thread.ThreadLocalContext;
+import org.apache.dolphinscheduler.common.Constants;
 
-import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Objects;
-import java.util.TimeZone;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import lombok.extern.slf4j.Slf4j;
+/**
+ * date utils
+ */
+public class DateUtils {
 
-@Slf4j
-public final class DateUtils {
-
-    static final long C0 = 1L;
-    static final long C1 = C0 * 1000L;
-    static final long C2 = C1 * 1000L;
-    static final long C3 = C2 * 1000L;
-    static final long C4 = C3 * 60L;
-    static final long C5 = C4 * 60L;
-    static final long C6 = C5 * 24L;
-
-    private static final DateTimeFormatter YYYY_MM_DD_HH_MM_SS =
-            DateTimeFormatter.ofPattern(DateConstants.YYYY_MM_DD_HH_MM_SS);
+    private static final Logger logger = LoggerFactory.getLogger(DateUtils.class);
 
     private DateUtils() {
         throw new UnsupportedOperationException("Construct DateUtils");
@@ -62,20 +50,7 @@ public final class DateUtils {
      * @return local datetime
      */
     private static LocalDateTime date2LocalDateTime(Date date) {
-        String timezone = ThreadLocalContext.getTimezoneThreadLocal().get();
-        ZoneId zoneId = StringUtils.isNotEmpty(timezone) ? ZoneId.of(timezone) : ZoneId.systemDefault();
-        return date2LocalDateTime(date, zoneId);
-    }
-
-    /**
-     * date to local datetime
-     *
-     * @param date   date
-     * @param zoneId zoneId
-     * @return local datetime
-     */
-    private static LocalDateTime date2LocalDateTime(Date date, ZoneId zoneId) {
-        return LocalDateTime.ofInstant(date.toInstant(), zoneId);
+        return LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
     }
 
     /**
@@ -85,20 +60,17 @@ public final class DateUtils {
      * @return date
      */
     private static Date localDateTime2Date(LocalDateTime localDateTime) {
-        String timezone = ThreadLocalContext.getTimezoneThreadLocal().get();
-        ZoneId zoneId = StringUtils.isNotEmpty(timezone) ? ZoneId.of(timezone) : ZoneId.systemDefault();
-        return localDateTime2Date(localDateTime, zoneId);
+        Instant instant = localDateTime.atZone(ZoneId.systemDefault()).toInstant();
+        return Date.from(instant);
     }
 
     /**
-     * local datetime to date
+     * get current date str
      *
-     * @param localDateTime local datetime
-     * @return date
+     * @return date string
      */
-    private static Date localDateTime2Date(LocalDateTime localDateTime, ZoneId zoneId) {
-        Instant instant = localDateTime.atZone(zoneId).toInstant();
-        return Date.from(instant);
+    public static String getCurrentTime() {
+        return getCurrentTime(Constants.YYYY_MM_DD_HH_MM_SS);
     }
 
     /**
@@ -114,34 +86,23 @@ public final class DateUtils {
     /**
      * get the formatted date string
      *
-     * @param date   date
+     * @param date date
      * @param format e.g. yyyy-MM-dd HH:mm:ss
      * @return date string
      */
-    public static String format(Date date, String format, String timezone) {
-        return format(date, DateTimeFormatter.ofPattern(format), timezone);
-    }
-
-    public static String format(Date date, DateTimeFormatter dateTimeFormatter, String timezone) {
-        LocalDateTime localDateTime =
-                StringUtils.isEmpty(timezone) ? date2LocalDateTime(date)
-                        : date2LocalDateTime(date, ZoneId.of(timezone));
-        return format(localDateTime, dateTimeFormatter);
+    public static String format(Date date, String format) {
+        return format(date2LocalDateTime(date), format);
     }
 
     /**
      * get the formatted date string
      *
      * @param localDateTime local data time
-     * @param format        yyyy-MM-dd HH:mm:ss
+     * @param format yyyy-MM-dd HH:mm:ss
      * @return date string
      */
     public static String format(LocalDateTime localDateTime, String format) {
-        return format(localDateTime, DateTimeFormatter.ofPattern(format));
-    }
-
-    public static String format(LocalDateTime localDateTime, DateTimeFormatter dateTimeFormatter) {
-        return localDateTime.format(dateTimeFormatter);
+        return localDateTime.format(DateTimeFormatter.ofPattern(format));
     }
 
     /**
@@ -151,115 +112,36 @@ public final class DateUtils {
      * @return date string
      */
     public static String dateToString(Date date) {
-        return format(date, YYYY_MM_DD_HH_MM_SS, null);
+        return format(date, Constants.YYYY_MM_DD_HH_MM_SS);
     }
 
-    /**
-     * convert time to yyyy-MM-dd HH:mm:ss format
-     *
-     * @param date     date
-     * @param timezone timezone
-     * @return date string
-     */
-    public static String dateToString(Date date, String timezone) {
-        return format(date, YYYY_MM_DD_HH_MM_SS, timezone);
-    }
-
-    /**
-     * convert zone date time to yyyy-MM-dd HH:mm:ss format
-     *
-     * @param zonedDateTime zone date time
-     * @return zone date time string
-     */
-    public static String dateToString(ZonedDateTime zonedDateTime) {
-        return YYYY_MM_DD_HH_MM_SS.format(zonedDateTime);
-    }
-
-    /**
-     * convert zone date time to yyyy-MM-dd HH:mm:ss format
-     *
-     * @param zonedDateTime zone date time
-     * @param timezone      time zone
-     * @return zone date time string
-     */
-    public static String dateToString(ZonedDateTime zonedDateTime, String timezone) {
-        return dateToString(zonedDateTime, ZoneId.of(timezone));
-    }
-
-    /**
-     * convert zone date time to yyyy-MM-dd HH:mm:ss format
-     *
-     * @param zonedDateTime zone date time
-     * @param zoneId        zone id
-     * @return zone date time string
-     */
-    public static String dateToString(ZonedDateTime zonedDateTime, ZoneId zoneId) {
-        return DateTimeFormatter.ofPattern(DateConstants.YYYY_MM_DD_HH_MM_SS).withZone(zoneId).format(zonedDateTime);
-    }
 
     /**
      * convert string to date and time
      *
-     * @param date     date
-     * @param format   format
-     * @param timezone timezone, if null, use system default timezone
+     * @param date date
+     * @param format format
      * @return date
      */
-    public static Date parse(String date, String format, String timezone) {
-        return parse(date, DateTimeFormatter.ofPattern(format), timezone);
-    }
-
-    public static Date parse(String date, DateTimeFormatter dateTimeFormatter, String timezone) {
+    public static Date parse(String date, String format) {
         try {
-            LocalDateTime ldt = LocalDateTime.parse(date, dateTimeFormatter);
-            if (StringUtils.isEmpty(timezone)) {
-                return localDateTime2Date(ldt);
-            }
-            return localDateTime2Date(ldt, ZoneId.of(timezone));
+            LocalDateTime ldt = LocalDateTime.parse(date, DateTimeFormatter.ofPattern(format));
+            return localDateTime2Date(ldt);
         } catch (Exception e) {
-            log.error("error while parse date:" + date, e);
+            logger.error("error while parse date:" + date, e);
         }
         return null;
     }
 
-    public static ZonedDateTime parseZoneDateTime(@Nonnull String date, @Nonnull DateTimeFormatter dateTimeFormatter,
-                                                  @Nullable String timezone) {
-        ZonedDateTime zonedDateTime = ZonedDateTime.parse(date, dateTimeFormatter);
-        if (StringUtils.isNotEmpty(timezone)) {
-            return zonedDateTime.withZoneSameInstant(ZoneId.of(timezone));
-        }
-        return zonedDateTime;
-    }
 
     /**
      * convert date str to yyyy-MM-dd HH:mm:ss format
      *
-     * @param date date string
+     * @param str date string
      * @return yyyy-MM-dd HH:mm:ss format
      */
-    public static @Nullable Date stringToDate(String date) {
-        return parse(date, YYYY_MM_DD_HH_MM_SS, null);
-    }
-
-    public static ZonedDateTime stringToZoneDateTime(@Nonnull String date) {
-        Date d = stringToDate(date);
-        if (d == null) {
-            throw new IllegalArgumentException(String.format(
-                    "data: %s should be a validate data string - yyyy-MM-dd HH:mm:ss ",
-                    date));
-        }
-        return ZonedDateTime.ofInstant(d.toInstant(), ZoneId.systemDefault());
-    }
-
-    /**
-     * convert date str to yyyy-MM-dd HH:mm:ss format
-     *
-     * @param date     date string
-     * @param timezone
-     * @return yyyy-MM-dd HH:mm:ss format
-     */
-    public static Date stringToDate(String date, String timezone) {
-        return parse(date, YYYY_MM_DD_HH_MM_SS, timezone);
+    public static Date stringToDate(String str) {
+        return parse(str, Constants.YYYY_MM_DD_HH_MM_SS);
     }
 
     /**
@@ -287,11 +169,35 @@ public final class DateUtils {
         return Math.abs(d1.getTime() - d2.getTime());
     }
 
+
+    /**
+     * get hours between two dates
+     *
+     * @param d1 date1
+     * @param d2 date2
+     * @return differ hours
+     */
+    public static long diffHours(Date d1, Date d2) {
+        return (long) Math.ceil(diffMin(d1, d2) / 60.0);
+    }
+
+    /**
+     * get minutes between two dates
+     *
+     * @param d1 date1
+     * @param d2 date2
+     * @return differ minutes
+     */
+    public static long diffMin(Date d1, Date d2) {
+        return (long) Math.ceil(differSec(d1, d2) / 60.0);
+    }
+
+
     /**
      * get the date of the specified date in the days before and after
      *
      * @param date date
-     * @param day  day
+     * @param day day
      * @return the date of the specified date in the days before and after
      */
     public static Date getSomeDay(Date date, int day) {
@@ -317,11 +223,21 @@ public final class DateUtils {
      * compare two dates
      *
      * @param future future date
-     * @param old    old date
+     * @param old old date
      * @return true if future time greater than old time
      */
     public static boolean compare(Date future, Date old) {
         return future.getTime() > old.getTime();
+    }
+
+    /**
+     * convert schedule string to date
+     *
+     * @param schedule schedule
+     * @return convert schedule string to date
+     */
+    public static Date getScheduleDate(String schedule) {
+        return stringToDate(schedule);
     }
 
     /**
@@ -342,24 +258,17 @@ public final class DateUtils {
     }
 
     /**
-     * format time to duration, if end date is null, use current time as end time
+     * format time to duration
      *
-     * @param start start
-     * @param end end
+     * @param d1 d1
+     * @param d2 d2
      * @return format time
      */
-    public static String format2Duration(Date start, Date end) {
-        if (start == null) {
+    public static String format2Duration(Date d1, Date d2) {
+        if (d1 == null || d2 == null) {
             return null;
         }
-        if (end == null) {
-            end = new Date();
-        }
-        if (start.after(end)) {
-            log.warn("start Time {} is later than end Time {}", start, end);
-            return null;
-        }
-        return format2Duration(differMs(start, end));
+        return format2Duration(differMs(d1, d2));
     }
 
     /**
@@ -374,11 +283,6 @@ public final class DateUtils {
         long hours = MILLISECONDS.toDurationHours(ms);
         long minutes = MILLISECONDS.toDurationMinutes(ms);
         long seconds = MILLISECONDS.toDurationSeconds(ms);
-
-        if (days == 0 && hours == 0 && minutes == 0 && seconds == 0) {
-            // if duration is zero, set 1s
-            seconds = 1;
-        }
 
         StringBuilder strBuilder = new StringBuilder();
         strBuilder = days > 0 ? strBuilder.append(days).append("d").append(" ") : strBuilder;
@@ -445,7 +349,7 @@ public final class DateUtils {
     /**
      * get some hour of day
      *
-     * @param date       date
+     * @param date date
      * @param offsetHour hours
      * @return some hour of day
      */
@@ -547,15 +451,16 @@ public final class DateUtils {
      * @return current date
      */
     public static Date getCurrentDate() {
-        return new Date();
+        return DateUtils.parse(DateUtils.getCurrentTime(),
+                Constants.YYYY_MM_DD_HH_MM_SS);
     }
 
     /**
      * get date
      *
-     * @param date          date
+     * @param date date
      * @param calendarField calendarField
-     * @param amount        amount
+     * @param amount amount
      * @return date
      */
     public static Date add(final Date date, final int calendarField, final int amount) {
@@ -569,71 +474,38 @@ public final class DateUtils {
     }
 
     /**
-     * starting from the current time, get how many seconds are left before the target time.
-     * targetTime = baseTime + intervalSeconds
-     *
-     * @param baseTime        base time
-     * @param intervalSeconds a period of time
-     * @return the number of seconds
-     */
-    public static long getRemainTime(Date baseTime, long intervalSeconds) {
-        if (baseTime == null) {
-            return 0;
-        }
-        long usedTime = (System.currentTimeMillis() - baseTime.getTime()) / 1000;
-        return intervalSeconds - usedTime;
-    }
-
-    /**
      * get current time stamp : yyyyMMddHHmmssSSS
      *
      * @return date string
      */
     public static String getCurrentTimeStamp() {
-        return getCurrentTime(DateConstants.YYYYMMDDHHMMSSSSS);
+        return getCurrentTime(Constants.YYYYMMDDHHMMSSSSS);
     }
 
-    /**
-     * transform date to target timezone date
-     * sourceTimeZoneId is system default timezone
-     */
-    public static Date transformTimezoneDate(Date date, String targetTimezoneId) {
-        return transformTimezoneDate(date, ZoneId.systemDefault().getId(), targetTimezoneId);
-    }
-
-    /**
-     * transform date from source timezone date to target timezone date
-     * <p>e.g.
-     * <p> if input date is `Thu Apr 28 10:00:00 UTC 2022`, sourceTimezoneId is UTC
-     * <p>targetTimezoneId is Asia/Shanghai
-     * <p>this method will return `Thu Apr 28 02:00:00 UTC 2022`
-     */
-    public static Date transformTimezoneDate(Date date, String sourceTimezoneId, String targetTimezoneId) {
-        if (StringUtils.isEmpty(sourceTimezoneId) || StringUtils.isEmpty(targetTimezoneId)) {
-            return date;
-        }
-        String dateToString = dateToString(date, sourceTimezoneId);
-        LocalDateTime localDateTime =
-                LocalDateTime.parse(dateToString, DateTimeFormatter.ofPattern(DateConstants.YYYY_MM_DD_HH_MM_SS));
-        ZonedDateTime zonedDateTime =
-                ZonedDateTime.of(localDateTime, TimeZone.getTimeZone(targetTimezoneId).toZoneId());
-        return Date.from(zonedDateTime.toInstant());
-    }
-
-    /**
-     * get timezone by timezoneId
-     */
-    public static TimeZone getTimezone(String timezoneId) {
-        if (StringUtils.isEmpty(timezoneId)) {
-            return null;
-        }
-        return TimeZone.getTimeZone(timezoneId);
-    }
+    static final long C0 = 1L;
+    static final long C1 = C0 * 1000L;
+    static final long C2 = C1 * 1000L;
+    static final long C3 = C2 * 1000L;
+    static final long C4 = C3 * 60L;
+    static final long C5 = C4 * 60L;
+    static final long C6 = C5 * 24L;
 
     /**
      * Time unit representing one thousandth of a second
      */
     public static class MILLISECONDS {
+
+        public static long toSeconds(long d) {
+            return d / (C3 / C2);
+        }
+
+        public static long toMinutes(long d) {
+            return d / (C4 / C2);
+        }
+
+        public static long toHours(long d) {
+            return d / (C5 / C2);
+        }
 
         public static long toDays(long d) {
             return d / (C6 / C2);
@@ -651,104 +523,6 @@ public final class DateUtils {
             return (d % (C6 / C2)) / (C5 / C2);
         }
 
-    }
-
-    /**
-     * transform timeStamp to local date
-     *
-     * @param timeStamp time stamp (milliseconds)
-     * @return local date
-     */
-    public static @Nullable Date timeStampToDate(long timeStamp) {
-        return timeStamp <= 0L ? null : new Date(timeStamp);
-    }
-
-    /**
-     * transform date to timeStamp
-     * @param date date
-     * @return time stamp (milliseconds)
-     */
-    public static long dateToTimeStamp(Date date) {
-        return date == null ? 0L : date.getTime();
-    }
-
-    /**
-     * a default datetime formatter for the timestamp
-     */
-    private static final DateTimeFormatter DEFAULT_DATETIME_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    /**
-     * @param timeMillis timeMillis like System.currentTimeMillis()
-     * @return string formatted as yyyy-MM-dd HH:mm:ss
-     */
-    public static String formatTimeStamp(long timeMillis) {
-        return formatTimeStamp(timeMillis, DEFAULT_DATETIME_FORMATTER);
-    }
-
-    /**
-     * @param timeMillis timeMillis like System.currentTimeMillis()
-     * @param dateTimeFormatter expect formatter, like yyyy-MM-dd HH:mm:ss
-     * @return formatted string
-     */
-    public static String formatTimeStamp(long timeMillis, DateTimeFormatter dateTimeFormatter) {
-        Objects.requireNonNull(dateTimeFormatter);
-        return dateTimeFormatter.format(LocalDateTime.ofInstant(Instant.ofEpochMilli(timeMillis),
-                ZoneId.systemDefault()));
-    }
-
-    /**
-     * get the formatted date string
-     *
-     * @param date date
-     * @param format e.g. yyyy-MM-dd HH:mm:ss
-     * @return date string
-     */
-    public static String format(Date date, String format) {
-        return format(date2LocalDateTime(date), format);
-    }
-
-    /**
-     * convert string to date and time
-     *
-     * @param date date
-     * @param format format
-     * @return date
-     */
-    public static Date parse(String date, String format) {
-        try {
-            LocalDateTime ldt = LocalDateTime.parse(date, DateTimeFormatter.ofPattern(format));
-            return localDateTime2Date(ldt);
-        } catch (Exception e) {
-            log.error("error while parse date:" + date, e);
-        }
-        return null;
-    }
-
-    /**
-     * convert schedule string to date
-     *
-     * @param schedule schedule
-     * @return convert schedule string to date
-     */
-    public static Date getScheduleDate(String schedule) {
-        return stringToDate(schedule);
-    }
-
-    public static Date addMonths(Date date, int amount) {
-        return add(date, 2, amount);
-    }
-
-    public static Date addDays(Date date, int amount) {
-        return add(date, 5, amount);
-    }
-
-    public static Date addMinutes(Date date, int amount) {
-        return add(date, 12, amount);
-    }
-
-    public static String getTimestampString() {
-        return String.valueOf(System.currentTimeMillis());
     }
 
 }

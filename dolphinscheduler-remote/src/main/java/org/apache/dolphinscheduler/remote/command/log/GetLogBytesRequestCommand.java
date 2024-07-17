@@ -17,22 +17,15 @@
 
 package org.apache.dolphinscheduler.remote.command.log;
 
-import org.apache.dolphinscheduler.common.utils.JSONUtils;
 import org.apache.dolphinscheduler.remote.command.Command;
 import org.apache.dolphinscheduler.remote.command.CommandType;
+import org.apache.dolphinscheduler.remote.utils.FastJsonSerializer;
 
 import java.io.Serializable;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  *  get log bytes request command
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class GetLogBytesRequestCommand implements Serializable {
 
     /**
@@ -40,15 +33,30 @@ public class GetLogBytesRequestCommand implements Serializable {
      */
     private String path;
 
+    public GetLogBytesRequestCommand() {
+    }
+
+    public GetLogBytesRequestCommand(String path) {
+        this.path = path;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+
     /**
      * package request command
      *
      * @return command
      */
-    public Command convert2Command() {
+    public Command convert2Command(){
         Command command = new Command();
         command.setType(CommandType.GET_LOG_BYTES_REQUEST);
-        byte[] body = JSONUtils.toJsonByteArray(this);
+        byte[] body = FastJsonSerializer.serialize(this);
         command.setBody(body);
         return command;
     }

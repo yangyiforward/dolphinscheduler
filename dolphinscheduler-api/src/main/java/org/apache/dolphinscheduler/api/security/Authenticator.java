@@ -14,18 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.security;
 
 import org.apache.dolphinscheduler.api.utils.Result;
 import org.apache.dolphinscheduler.dao.entity.User;
-
+import javax.servlet.http.HttpServletRequest;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-
 public interface Authenticator {
-
     /**
      * Verifying legality via username and password
      * @param username user name

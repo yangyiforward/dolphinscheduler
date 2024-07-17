@@ -14,53 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.interceptor;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 
 import org.apache.dolphinscheduler.api.ApiApplicationServer;
 import org.apache.dolphinscheduler.api.security.Authenticator;
-import org.apache.dolphinscheduler.common.enums.ProfileType;
 import org.apache.dolphinscheduler.common.enums.UserType;
 import org.apache.dolphinscheduler.dao.entity.User;
 import org.apache.dolphinscheduler.dao.mapper.UserMapper;
-
-import java.util.Date;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.annotation.DirtiesContext.ClassMode;
-import org.springframework.test.annotation.Rollback;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.junit4.SpringRunner;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import static org.mockito.Mockito.when;
 
-@ActiveProfiles(value = {ProfileType.H2})
+@RunWith(SpringRunner.class)
 @SpringBootTest(classes = ApiApplicationServer.class)
-@Transactional
-@Rollback
-@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 public class LoginHandlerInterceptorTest {
-
     private static final Logger logger = LoggerFactory.getLogger(LoginHandlerInterceptorTest.class);
 
     @Autowired
     LoginHandlerInterceptor interceptor;
-    @MockBean(name = "authenticator")
+    @MockBean
     private Authenticator authenticator;
-    @MockBean(name = "userMapper")
+    @MockBean
     private UserMapper userMapper;
 
     @Test
@@ -68,26 +52,20 @@ public class LoginHandlerInterceptorTest {
         HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
         HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
         // test no token and no cookie
-        Assertions.assertFalse(interceptor.preHandle(request, response, null));
+        Assert.assertFalse(interceptor.preHandle(request, response, null));
 
         User mockUser = new User();
         mockUser.setId(1);
         mockUser.setUserType(UserType.GENERAL_USER);
-        mockUser.setState(1);
 
         // test no token
         when(authenticator.getAuthUser(request)).thenReturn(mockUser);
-        Assertions.assertTrue(interceptor.preHandle(request, response, null));
+        Assert.assertTrue(interceptor.preHandle(request, response, null));
 
         // test token
         String token = "123456";
         when(request.getHeader("token")).thenReturn(token);
-        when(userMapper.queryUserByToken(eq(token), any(Date.class))).thenReturn(mockUser);
-        Assertions.assertTrue(interceptor.preHandle(request, response, null));
-
-        // test disable user
-        mockUser.setState(0);
-        when(authenticator.getAuthUser(request)).thenReturn(mockUser);
-        Assertions.assertFalse(interceptor.preHandle(request, response, null));
+        when(userMapper.queryUserByToken(token)).thenReturn(mockUser);
+        Assert.assertTrue(interceptor.preHandle(request, response, null));
     }
 }

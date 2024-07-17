@@ -16,29 +16,36 @@
  */
 package org.apache.dolphinscheduler.dao.mapper;
 
-import org.apache.dolphinscheduler.dao.BaseDaoTest;
+
 import org.apache.dolphinscheduler.dao.entity.Session;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-
-public class SessionMapperTest extends BaseDaoTest {
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@Transactional
+@Rollback(true)
+public class SessionMapperTest {
 
     @Autowired
-    private SessionMapper sessionMapper;
+    SessionMapper sessionMapper;
 
     /**
      * insert
-     *
      * @return Session
      */
-    private Session insertOne() {
-        // insertOne
+    private Session insertOne(){
+        //insertOne
         Session session = new Session();
         session.setId(UUID.randomUUID().toString());
         session.setLastLoginTime(new Date());
@@ -51,23 +58,23 @@ public class SessionMapperTest extends BaseDaoTest {
      * test update
      */
     @Test
-    public void testUpdate() {
-        // insertOne
+    public void testUpdate(){
+        //insertOne
         Session session = insertOne();
         session.setLastLoginTime(new Date());
-        // update
+        //update
         int update = sessionMapper.updateById(session);
-        Assertions.assertEquals(update, 1);
+        Assert.assertEquals(update, 1);
     }
 
     /**
      * test delete
      */
     @Test
-    public void testDelete() {
+    public void testDelete(){
         Session session = insertOne();
         int delete = sessionMapper.deleteById(session.getId());
-        Assertions.assertEquals(delete, 1);
+        Assert.assertEquals(delete, 1);
     }
 
     /**
@@ -76,9 +83,9 @@ public class SessionMapperTest extends BaseDaoTest {
     @Test
     public void testQuery() {
         Session session = insertOne();
-        // query
+        //query
         List<Session> sessions = sessionMapper.selectList(null);
-        Assertions.assertNotEquals(sessions.size(), 0);
+        Assert.assertNotEquals(sessions.size(), 0);
     }
 
     /**
@@ -88,7 +95,7 @@ public class SessionMapperTest extends BaseDaoTest {
     public void testQueryByUserId() {
         Session session = insertOne();
         List<Session> sessions = sessionMapper.queryByUserId(session.getUserId());
-        Assertions.assertNotEquals(sessions.size(), 0);
+        Assert.assertNotEquals(sessions.size(), 0);
 
     }
 }

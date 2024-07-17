@@ -14,21 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.dto;
 
-import org.apache.dolphinscheduler.plugin.task.api.enums.TaskExecutionStatus;
+import org.apache.dolphinscheduler.common.enums.ExecutionStatus;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+/**
+ * task state count
+ */
 public class TaskStateCount {
 
-    private TaskExecutionStatus taskStateType;
     private int count;
+    private ExecutionStatus taskStateType;
 
+    public TaskStateCount(ExecutionStatus taskStateType, int count) {
+        this.taskStateType = taskStateType;
+        this.count = count;
+    }
+
+
+    public int getCount() {
+        return count;
+    }
+
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+    public ExecutionStatus getTaskStateType() {
+        return taskStateType;
+    }
+
+    public void setTaskStateType(ExecutionStatus taskStateType) {
+        this.taskStateType = taskStateType;
+    }
 }

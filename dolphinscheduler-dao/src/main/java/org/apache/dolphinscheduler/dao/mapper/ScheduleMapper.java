@@ -14,94 +14,57 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.mapper;
 
 import org.apache.dolphinscheduler.dao.entity.Schedule;
-
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
-import org.springframework.cache.annotation.CacheConfig;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-
 /**
  * scheduler mapper interface
  */
-@CacheConfig(cacheNames = "schedule", keyGenerator = "cacheKeyGenerator")
 public interface ScheduleMapper extends BaseMapper<Schedule> {
-
-    @CacheEvict(key = "#p0.processDefinitionCode")
-    int insert(Schedule entity);
-
-    @CacheEvict(key = "#p0.processDefinitionCode")
-    int updateById(@Param("et") Schedule entity);
-
-    /**
-     * query schedule list by process definition code
-     *
-     * @param processDefinitionCode processDefinitionCode
-     * @return schedule list
-     */
-    @Cacheable(sync = true)
-    List<Schedule> queryReleaseSchedulerListByProcessDefinitionCode(@Param("processDefinitionCode") long processDefinitionCode);
 
     /**
      * scheduler page
-     *
      * @param page page
-     * @param processDefinitionCode processDefinitionCode
+     * @param processDefinitionId processDefinitionId
      * @param searchVal searchVal
      * @return scheduler IPage
      */
-    IPage<Schedule> queryByProcessDefineCodePaging(IPage<Schedule> page,
-                                                   @Param("processDefinitionCode") long processDefinitionCode,
-                                                   @Param("searchVal") String searchVal);
-
-    /**
-     * Filter schedule
-     *
-     * @param page page
-     * @param schedule schedule
-     * @return schedule IPage
-     */
-    IPage<Schedule> filterSchedules(IPage<Schedule> page,
-                                    @Param("schedule") Schedule schedule);
+    IPage<Schedule> queryByProcessDefineIdPaging(IPage<Schedule> page,
+                                                 @Param("processDefinitionId") int processDefinitionId,
+                                                 @Param("searchVal") String searchVal);
 
     /**
      * query schedule list by project name
-     *
      * @param projectName projectName
      * @return schedule list
      */
     List<Schedule> querySchedulerListByProjectName(@Param("projectName") String projectName);
 
     /**
-     * query schedule list by process definition codes
-     *
-     * @param processDefineCodes processDefineCodes
+     * query schedule list by process definition ids
+     * @param processDefineIds processDefineIds
      * @return schedule list
      */
-    List<Schedule> selectAllByProcessDefineArray(@Param("processDefineCodes") long[] processDefineCodes);
+    List<Schedule> selectAllByProcessDefineArray(@Param("processDefineIds") int[] processDefineIds);
 
     /**
-     * query schedule list by process definition code
-     *
-     * @param processDefinitionCode processDefinitionCode
-     * @return schedule
+     * query schedule list by process definition id
+     * @param processDefinitionId processDefinitionId
+     * @return schedule list
      */
-    Schedule queryByProcessDefinitionCode(@Param("processDefinitionCode") long processDefinitionCode);
+    List<Schedule> queryByProcessDefinitionId(@Param("processDefinitionId") int processDefinitionId);
 
     /**
-     * query worker group list by process definition code
-     *
-     * @param processDefinitionCodeList processDefinitionCodeList
-     * @return schedule
+     * query schedule list by process definition id
+     * @param processDefinitionId processDefinitionId
+     * @return schedule list
      */
-    List<Schedule> querySchedulesByProcessDefinitionCodes(@Param("processDefinitionCodeList") List<Long> processDefinitionCodeList);
+    List<Schedule> queryReleaseSchedulerListByProcessDefinitionId(@Param("processDefinitionId") int processDefinitionId);
+
 }

@@ -17,17 +17,22 @@
 
 package org.apache.dolphinscheduler.api.interceptor;
 
-import org.apache.dolphinscheduler.api.controller.AbstractControllerTest;
+import org.apache.dolphinscheduler.api.ApiApplicationServer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
-public class LocaleChangeInterceptorTest extends AbstractControllerTest {
+@RunWith(SpringRunner.class)
+@SpringBootTest(classes = ApiApplicationServer.class)
+public class LocaleChangeInterceptorTest {
 
     @Autowired
     LocaleChangeInterceptor interceptor;
@@ -37,7 +42,7 @@ public class LocaleChangeInterceptorTest extends AbstractControllerTest {
         HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
         HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
         // test no language
-        Assertions.assertTrue(interceptor.preHandle(request, response, null));
+        Assert.assertTrue(interceptor.preHandle(request, response, null));
     }
 
 }

@@ -31,7 +31,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -43,8 +45,9 @@ import io.netty.handler.timeout.IdleStateEvent;
  * netty client request handler
  */
 @ChannelHandler.Sharable
-@Slf4j
 public class NettyClientHandler extends ChannelInboundHandlerAdapter {
+
+    private final Logger logger = LoggerFactory.getLogger(NettyClientHandler.class);
 
     /**
      * netty client
@@ -71,7 +74,7 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
     public NettyClientHandler(NettyRemotingClient nettyRemotingClient, ExecutorService callbackExecutor) {
         this.nettyRemotingClient = nettyRemotingClient;
         this.callbackExecutor = callbackExecutor;
-        this.processors = new ConcurrentHashMap<>();
+        this.processors = new ConcurrentHashMap();
     }
 
     /**
@@ -79,9 +82,10 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
      * the current channel has reached the end of its life cycle
      *
      * @param ctx channel handler context
+     * @throws Exception
      */
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         nettyRemotingClient.closeChannel(ChannelUtils.toAddress(ctx.channel()));
         ctx.channel().close();
     }
@@ -91,9 +95,10 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
      *
      * @param ctx channel handler context
      * @param msg message
+     * @throws Exception
      */
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         processReceived(ctx.channel(), (Command) msg);
     }
 
@@ -101,7 +106,7 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
      * register processor
      *
      * @param commandType command type
-     * @param processor processor
+     * @param processor   processor
      */
     public void registerProcessor(final CommandType commandType, final NettyRequestProcessor processor) {
         this.registerProcessor(commandType, processor, null);
@@ -111,11 +116,10 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
      * register processor
      *
      * @param commandType command type
-     * @param processor processor
-     * @param executor thread executor
+     * @param processor   processor
+     * @param executor    thread executor
      */
-    public void registerProcessor(final CommandType commandType, final NettyRequestProcessor processor,
-                                  final ExecutorService executor) {
+    public void registerProcessor(final CommandType commandType, final NettyRequestProcessor processor, final ExecutorService executor) {
         ExecutorService executorRef = executor;
         if (executorRef == null) {
             executorRef = defaultExecutor;
@@ -134,8 +138,12 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
             future.setResponseCommand(command);
             future.release();
             if (future.getInvokeCallback() != null) {
-                future.removeFuture();
-                this.callbackExecutor.submit(future::executeInvokeCallback);
+                this.callbackExecutor.submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        future.executeInvokeCallback();
+                    }
+                });
             } else {
                 future.putResponse(command);
             }
@@ -150,30 +158,30 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
             Runnable run = () -> {
                 try {
                     pair.getLeft().process(channel, command);
-                } catch (Exception e) {
-                    log.error(String.format("process command %s exception", command), e);
+                } catch (Throwable e) {
+                    logger.error(String.format("process command %s exception", command), e);
                 }
             };
             try {
                 pair.getRight().submit(run);
             } catch (RejectedExecutionException e) {
-                log.warn("thread pool is full, discard command {} from {}", command,
-                        ChannelUtils.getRemoteAddress(channel));
+                logger.warn("thread pool is full, discard command {} from {}", command, ChannelUtils.getRemoteAddress(channel));
             }
         } else {
-            log.warn("receive response {}, but not matched any request ", command);
+            logger.warn("receive response {}, but not matched any request ", command);
         }
     }
 
     /**
      * caught exception
      *
-     * @param ctx channel handler context
+     * @param ctx   channel handler context
      * @param cause cause
+     * @throws Exception
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("exceptionCaught : {}", cause.getMessage(), cause);
+        logger.error("exceptionCaught : {}", cause.getMessage(), cause);
         nettyRemotingClient.closeChannel(ChannelUtils.toAddress(ctx.channel()));
         ctx.channel().close();
     }
@@ -185,9 +193,9 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
             heartBeat.setType(CommandType.HEART_BEAT);
             heartBeat.setBody(heartBeatData);
             ctx.channel().writeAndFlush(heartBeat)
-                    .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-            if (log.isDebugEnabled()) {
-                log.debug("Client send heart beat to: {}", ChannelUtils.getRemoteAddress(ctx.channel()));
+                .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Client send heart beat to: {}", ChannelUtils.getRemoteAddress(ctx.channel()));
             }
         } else {
             super.userEventTriggered(ctx, evt);

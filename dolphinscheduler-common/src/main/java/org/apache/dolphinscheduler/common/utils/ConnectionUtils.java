@@ -14,38 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.common.utils;
 
 import java.util.Arrays;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 public class ConnectionUtils {
 
-    private ConnectionUtils() {
-        throw new UnsupportedOperationException("Construct ConnectionUtils");
-    }
+  public static final Logger logger = LoggerFactory.getLogger(ConnectionUtils.class);
 
-    /**
-     * release resource
-     *
-     * @param resources resources
-     */
-    public static void releaseResource(AutoCloseable... resources) {
+  private ConnectionUtils() {
+    throw new IllegalStateException("ConnectionUtils class");
+  }
 
-        if (resources == null || resources.length == 0) {
-            return;
-        }
-        Arrays.stream(resources).filter(Objects::nonNull)
-                .forEach(resource -> {
-                    try {
-                        resource.close();
-                    } catch (Exception e) {
-                        log.error(e.getMessage(), e);
-                    }
-                });
+  /**
+   * release resource
+   * @param resources resources
+   */
+  public static void releaseResource(AutoCloseable... resources) {
+
+    if (resources == null || resources.length == 0) {
+      return;
     }
+    Arrays.stream(resources).filter(Objects::nonNull)
+        .forEach(resource -> {
+          try {
+            resource.close();
+          } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+          }
+        });
+  }
 }

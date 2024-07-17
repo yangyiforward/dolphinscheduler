@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.common.enums;
+
 
 /**
  * task record status
@@ -29,6 +29,7 @@ public enum TaskRecordStatus {
      * 1 failure
      * 2 exception
      */
-    SUCCESS, FAILURE, EXCEPTION
+    SUCCESS,FAILURE,EXCEPTION
+
 
 }

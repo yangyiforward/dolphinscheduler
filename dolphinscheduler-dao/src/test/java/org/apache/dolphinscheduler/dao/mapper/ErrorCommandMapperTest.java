@@ -14,36 +14,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.mapper;
 
+
 import org.apache.dolphinscheduler.common.enums.CommandType;
-import org.apache.dolphinscheduler.dao.BaseDaoTest;
 import org.apache.dolphinscheduler.dao.entity.CommandCount;
 import org.apache.dolphinscheduler.dao.entity.ErrorCommand;
 import org.apache.dolphinscheduler.dao.entity.ProcessDefinition;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-
-public class ErrorCommandMapperTest extends BaseDaoTest {
-
-    @Autowired
-    private ErrorCommandMapper errorCommandMapper;
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@Transactional
+@Rollback(true)
+public class ErrorCommandMapperTest {
 
     @Autowired
-    private ProcessDefinitionMapper processDefinitionMapper;
+    ErrorCommandMapper errorCommandMapper;
+
+    @Autowired
+    ProcessDefinitionMapper processDefinitionMapper;
+
 
     /**
      * insert
      * @return ErrorCommand
      */
-    private ErrorCommand insertOne() {
-        // insertOne
+    private ErrorCommand insertOne(){
+        //insertOne
         ErrorCommand errorCommand = new ErrorCommand();
         errorCommand.setId(10101);
         errorCommand.setCommandType(CommandType.START_PROCESS);
@@ -53,6 +61,10 @@ public class ErrorCommandMapperTest extends BaseDaoTest {
         return errorCommand;
     }
 
+
+
+
+
     /**
      * test query
      */
@@ -61,31 +73,33 @@ public class ErrorCommandMapperTest extends BaseDaoTest {
         ErrorCommand errorCommand = insertOne();
 
         ProcessDefinition processDefinition = new ProcessDefinition();
-        processDefinition.setCode(1L);
         processDefinition.setName("def 1");
-        processDefinition.setProjectCode(1010L);
+        processDefinition.setProjectId(1010);
         processDefinition.setUserId(101);
         processDefinition.setUpdateTime(new Date());
         processDefinition.setCreateTime(new Date());
         processDefinitionMapper.insert(processDefinition);
 
-        errorCommand.setProcessDefinitionCode(processDefinition.getCode());
+        errorCommand.setProcessDefinitionId(processDefinition.getId());
         errorCommandMapper.updateById(errorCommand);
+
 
         List<CommandCount> commandCounts = errorCommandMapper.countCommandState(
                 null,
                 null,
-                new Long[0]);
+                new Integer[0]
+        );
 
-        Long[] projectCodeArray = new Long[2];
-        projectCodeArray[0] = processDefinition.getProjectCode();
-        projectCodeArray[1] = 200L;
+        Integer[] projectIdArray = new Integer[2];
+        projectIdArray[0] = processDefinition.getProjectId();
+        projectIdArray[1] = 200;
         List<CommandCount> commandCounts2 = errorCommandMapper.countCommandState(
                 null,
                 null,
-                projectCodeArray);
+                projectIdArray
+        );
 
-        Assertions.assertNotEquals(commandCounts.size(), 0);
-        Assertions.assertNotEquals(commandCounts2.size(), 0);
+        Assert.assertNotEquals(commandCounts.size(), 0);
+        Assert.assertNotEquals(commandCounts2.size(), 0);
     }
 }

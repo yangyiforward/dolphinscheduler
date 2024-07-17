@@ -14,84 +14,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.controller;
 
-import static org.apache.dolphinscheduler.api.enums.Status.CREATE_ALERT_GROUP_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.DELETE_ALERT_GROUP_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.LIST_PAGING_ALERT_GROUP_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.QUERY_ALERT_GROUP_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.QUERY_ALL_ALERTGROUP_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.UPDATE_ALERT_GROUP_ERROR;
-
-import org.apache.dolphinscheduler.api.aspect.AccessLogAnnotation;
-import org.apache.dolphinscheduler.api.enums.Status;
 import org.apache.dolphinscheduler.api.exceptions.ApiException;
 import org.apache.dolphinscheduler.api.service.AlertGroupService;
 import org.apache.dolphinscheduler.api.utils.Result;
-import org.apache.dolphinscheduler.common.constants.Constants;
+import org.apache.dolphinscheduler.common.Constants;
+import org.apache.dolphinscheduler.common.enums.AlertType;
+import org.apache.dolphinscheduler.common.utils.ParameterUtils;
 import org.apache.dolphinscheduler.dao.entity.User;
-import org.apache.dolphinscheduler.plugin.task.api.utils.ParameterUtils;
-
-import java.util.Map;
-
-import lombok.extern.slf4j.Slf4j;
-
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import org.apache.dolphinscheduler.api.enums.Status;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.Parameters;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.dolphinscheduler.api.enums.Status.*;
 
 /**
  * alert group controller
  */
-@Tag(name = "ALERT_GROUP_TAG")
+@Api(tags = "ALERT_GROUP_TAG", position = 1)
 @RestController
-@RequestMapping("/alert-groups")
-@Slf4j
+@RequestMapping("alert-group")
 public class AlertGroupController extends BaseController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AlertGroupController.class);
 
     @Autowired
     private AlertGroupService alertGroupService;
 
+
     /**
      * create alert group
      *
-     * @param loginUser login user
-     * @param groupName group name
+     * @param loginUser   login user
+     * @param groupName   group name
+     * @param groupType   group type
      * @param description description
      * @return create result code
      */
-    @Operation(summary = "createAlertgroup", description = "CREATE_ALERT_GROUP_NOTES")
-    @Parameters({
-            @Parameter(name = "groupName", description = "GROUP_NAME", required = true, schema = @Schema(implementation = String.class)),
-            @Parameter(name = "description", description = "DESC", schema = @Schema(implementation = String.class)),
-            @Parameter(name = "alertInstanceIds", description = "alertInstanceIds", required = true, schema = @Schema(implementation = String.class))
+    @ApiOperation(value = "createAlertgroup", notes = "CREATE_ALERT_GROUP_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "groupName", value = "GROUP_NAME", required = true, dataType = "String"),
+            @ApiImplicitParam(name = "groupType", value = "GROUP_TYPE", required = true, dataType = "AlertType"),
+            @ApiImplicitParam(name = "description", value = "DESC", dataType = "String")
     })
-    @PostMapping()
+    @PostMapping(value = "/create")
     @ResponseStatus(HttpStatus.CREATED)
     @ApiException(CREATE_ALERT_GROUP_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result createAlertgroup(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+    public Result createAlertgroup(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
                                    @RequestParam(value = "groupName") String groupName,
-                                   @RequestParam(value = "description", required = false) String description,
-                                   @RequestParam(value = "alertInstanceIds") String alertInstanceIds) {
-        Map<String, Object> result =
-                alertGroupService.createAlertgroup(loginUser, groupName, description, alertInstanceIds);
+                                   @RequestParam(value = "groupType") AlertType groupType,
+                                   @RequestParam(value = "description", required = false) String description) {
+        logger.info("loginUser user {}, create alertgroup, groupName: {}, groupType: {}, desc: {}",
+                loginUser.getUserName(), groupName, groupType, description);
+        Map<String, Object> result = alertGroupService.createAlertgroup(loginUser, groupName, groupType, description);
         return returnDataList(result);
     }
 
@@ -101,14 +88,14 @@ public class AlertGroupController extends BaseController {
      * @param loginUser login user
      * @return alert group list
      */
-    @Operation(summary = "listAlertgroupById", description = "QUERY_ALERT_GROUP_LIST_NOTES")
+    @ApiOperation(value = "list", notes = "QUERY_ALERT_GROUP_LIST_NOTES")
     @GetMapping(value = "/list")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(QUERY_ALL_ALERTGROUP_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result list(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser) {
-
-        Map<String, Object> result = alertGroupService.queryAlertgroup(loginUser);
+    public Result list(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser) {
+        logger.info("login  user {}, query all alertGroup",
+                loginUser.getUserName());
+        HashMap<String, Object> result = alertGroupService.queryAlertgroup();
         return returnDataList(result);
     }
 
@@ -116,83 +103,64 @@ public class AlertGroupController extends BaseController {
      * paging query alarm group list
      *
      * @param loginUser login user
-     * @param pageNo page number
+     * @param pageNo    page number
      * @param searchVal search value
-     * @param pageSize page size
+     * @param pageSize  page size
      * @return alert group list page
      */
-    @Operation(summary = "queryAlertGroupListPaging", description = "QUERY_ALERT_GROUP_LIST_PAGING_NOTES")
-    @Parameters({
-            @Parameter(name = "searchVal", description = "SEARCH_VAL", schema = @Schema(implementation = String.class)),
-            @Parameter(name = "pageNo", description = "PAGE_NO", required = true, schema = @Schema(implementation = int.class, example = "1")),
-            @Parameter(name = "pageSize", description = "PAGE_SIZE", required = true, schema = @Schema(implementation = int.class, example = "20"))
+    @ApiOperation(value = "queryAlertGroupListPaging", notes = "QUERY_ALERT_GROUP_LIST_PAGING_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "searchVal", value = "SEARCH_VAL", type = "String"),
+            @ApiImplicitParam(name = "pageNo", value = "PAGE_NO", dataType = "Int", example = "1"),
+            @ApiImplicitParam(name = "pageSize", value = "PAGE_SIZE", dataType = "Int", example = "20")
     })
-    @GetMapping()
+    @GetMapping(value = "/list-paging")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(LIST_PAGING_ALERT_GROUP_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result listPaging(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
-                             @RequestParam(value = "searchVal", required = false) String searchVal,
+    public Result listPaging(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
                              @RequestParam("pageNo") Integer pageNo,
+                             @RequestParam(value = "searchVal", required = false) String searchVal,
                              @RequestParam("pageSize") Integer pageSize) {
-        Result result = checkPageParams(pageNo, pageSize);
-        if (!result.checkResult()) {
-            return result;
+        logger.info("login  user {}, list paging, pageNo: {}, searchVal: {}, pageSize: {}",
+                loginUser.getUserName(), pageNo, searchVal, pageSize);
+        Map<String, Object> result = checkPageParams(pageNo, pageSize);
+        if (result.get(Constants.STATUS) != Status.SUCCESS) {
+            return returnDataListPaging(result);
         }
+
         searchVal = ParameterUtils.handleEscapes(searchVal);
-        return alertGroupService.listPaging(loginUser, searchVal, pageNo, pageSize);
-    }
-    /**
-     * check alarm group detail by Id
-     *
-     * @param loginUser login user
-     * @param id alert group id
-     * @return one alert group
-     */
-
-    @Operation(summary = "queryAlertGroupById", description = "QUERY_ALERT_GROUP_BY_ID_NOTES")
-    @Parameters({
-            @Parameter(name = "id", description = "ALERT_GROUP_ID", schema = @Schema(implementation = int.class, example = "1"))
-    })
-    @PostMapping(value = "/query")
-    @ResponseStatus(HttpStatus.OK)
-    @ApiException(QUERY_ALERT_GROUP_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result queryAlertGroupById(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
-                                      @RequestParam("id") Integer id) {
-
-        Map<String, Object> result = alertGroupService.queryAlertGroupById(loginUser, id);
-        return returnDataList(result);
+        result = alertGroupService.listPaging(loginUser, searchVal, pageNo, pageSize);
+        return returnDataListPaging(result);
     }
 
     /**
      * updateProcessInstance alert group
      *
-     * @param loginUser login user
-     * @param id alert group id
-     * @param groupName group name
+     * @param loginUser   login user
+     * @param id          alert group id
+     * @param groupName   group name
+     * @param groupType   group type
      * @param description description
      * @return update result code
      */
-    @Operation(summary = "updateAlertgroup", description = "UPDATE_ALERT_GROUP_NOTES")
-    @Parameters({
-            @Parameter(name = "id", description = "ALERT_GROUP_ID", required = true, schema = @Schema(implementation = int.class, example = "100")),
-            @Parameter(name = "groupName", description = "GROUP_NAME", required = true, schema = @Schema(implementation = String.class)),
-            @Parameter(name = "description", description = "DESC", schema = @Schema(implementation = String.class)),
-            @Parameter(name = "alertInstanceIds", description = "ALERT_INSTANCE_IDS", required = true, schema = @Schema(implementation = String.class))
+    @ApiOperation(value = "updateAlertgroup", notes = "UPDATE_ALERT_GROUP_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "id", value = "ALERT_GROUP_ID", required = true, dataType = "Int", example = "100"),
+            @ApiImplicitParam(name = "groupName", value = "GROUP_NAME", required = true, dataType = "String"),
+            @ApiImplicitParam(name = "groupType", value = "GROUP_TYPE", required = true, dataType = "AlertType"),
+            @ApiImplicitParam(name = "description", value = "DESC", dataType = "String")
     })
-    @PutMapping(value = "/{id}")
+    @PostMapping(value = "/update")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(UPDATE_ALERT_GROUP_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result updateAlertgroup(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
-                                   @PathVariable(value = "id") int id,
+    public Result updateAlertgroup(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+                                   @RequestParam(value = "id") int id,
                                    @RequestParam(value = "groupName") String groupName,
-                                   @RequestParam(value = "description", required = false) String description,
-                                   @RequestParam(value = "alertInstanceIds") String alertInstanceIds) {
-
-        Map<String, Object> result =
-                alertGroupService.updateAlertgroup(loginUser, id, groupName, description, alertInstanceIds);
+                                   @RequestParam(value = "groupType") AlertType groupType,
+                                   @RequestParam(value = "description", required = false) String description) {
+        logger.info("login  user {}, updateProcessInstance alertgroup, groupName: {}, groupType: {}, desc: {}",
+                loginUser.getUserName(), groupName, groupType, description);
+        Map<String, Object> result = alertGroupService.updateAlertgroup(loginUser, id, groupName, groupType, description);
         return returnDataList(result);
     }
 
@@ -200,22 +168,23 @@ public class AlertGroupController extends BaseController {
      * delete alert group by id
      *
      * @param loginUser login user
-     * @param id alert group id
+     * @param id        alert group id
      * @return delete result code
      */
-    @Operation(summary = "delAlertgroupById", description = "DELETE_ALERT_GROUP_BY_ID_NOTES")
-    @Parameters({
-            @Parameter(name = "id", description = "ALERT_GROUP_ID", required = true, schema = @Schema(implementation = int.class, example = "100"))
+    @ApiOperation(value = "delAlertgroupById", notes = "DELETE_ALERT_GROUP_BY_ID_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "id", value = "ALERT_GROUP_ID", required = true, dataType = "Int", example = "100")
     })
-    @DeleteMapping(value = "/{id}")
+    @PostMapping(value = "/delete")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(DELETE_ALERT_GROUP_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result delAlertgroupById(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
-                                    @PathVariable(value = "id") int id) {
+    public Result delAlertgroupById(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+                                    @RequestParam(value = "id") int id) {
+        logger.info("login user {}, delete AlertGroup, id: {},", loginUser.getUserName(), id);
         Map<String, Object> result = alertGroupService.delAlertgroupById(loginUser, id);
         return returnDataList(result);
     }
+
 
     /**
      * check alert group exist
@@ -224,20 +193,20 @@ public class AlertGroupController extends BaseController {
      * @param groupName group name
      * @return check result code
      */
-    @Operation(summary = "verifyGroupName", description = "VERIFY_ALERT_GROUP_NAME_NOTES")
-    @Parameters({
-            @Parameter(name = "groupName", description = "GROUP_NAME", required = true, schema = @Schema(implementation = String.class)),
+    @ApiOperation(value = "verifyGroupName", notes = "VERIFY_ALERT_GROUP_NAME_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "groupName", value = "GROUP_NAME", required = true, dataType = "String"),
     })
-    @GetMapping(value = "/verify-name")
+    @GetMapping(value = "/verify-group-name")
     @ResponseStatus(HttpStatus.OK)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result verifyGroupName(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+    public Result verifyGroupName(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
                                   @RequestParam(value = "groupName") String groupName) {
+        logger.info("login user {}, verify group name: {}", loginUser.getUserName(), groupName);
 
         boolean exist = alertGroupService.existGroupName(groupName);
         Result result = new Result();
         if (exist) {
-            log.error("group {} has exist, can't create again.", groupName);
+            logger.error("group {} has exist, can't create again.", groupName);
             result.setCode(Status.ALERT_GROUP_EXIST.getCode());
             result.setMsg(Status.ALERT_GROUP_EXIST.getMsg());
         } else {
@@ -245,5 +214,29 @@ public class AlertGroupController extends BaseController {
             result.setMsg(Status.SUCCESS.getMsg());
         }
         return result;
+    }
+
+    /**
+     * grant user
+     *
+     * @param loginUser    login user
+     * @param userIds      user ids in the group
+     * @param alertgroupId alert group id
+     * @return grant result code
+     */
+    @ApiOperation(value = "grantUser", notes = "GRANT_ALERT_GROUP_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "id", value = "ALERT_GROUP_ID", required = true, dataType = "Int", example = "100"),
+            @ApiImplicitParam(name = "userIds", value = "USER_IDS", required = true, dataType = "String")
+    })
+    @PostMapping(value = "/grant-user")
+    @ResponseStatus(HttpStatus.OK)
+    @ApiException(ALERT_GROUP_GRANT_USER_ERROR)
+    public Result grantUser(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+                            @RequestParam(value = "alertgroupId") int alertgroupId,
+                            @RequestParam(value = "userIds") String userIds) {
+        logger.info("login user {}, grant user, alertGroupId: {},userIds : {}", loginUser.getUserName(), alertgroupId, userIds);
+        Map<String, Object> result = alertGroupService.grantUser(loginUser, alertgroupId, userIds);
+        return returnDataList(result);
     }
 }

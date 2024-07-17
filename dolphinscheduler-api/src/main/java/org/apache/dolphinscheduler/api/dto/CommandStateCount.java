@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.dto;
 
 import org.apache.dolphinscheduler.common.enums.CommandType;
@@ -28,9 +27,7 @@ public class CommandStateCount {
     private int normalCount;
     private CommandType commandState;
 
-    public CommandStateCount() {
-    }
-
+    public CommandStateCount(){}
     public CommandStateCount(int errorCount, int normalCount, CommandType commandState) {
         this.errorCount = errorCount;
         this.normalCount = normalCount;
@@ -59,33 +56,5 @@ public class CommandStateCount {
 
     public void setCommandState(CommandType commandState) {
         this.commandState = commandState;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        CommandStateCount that = (CommandStateCount) o;
-
-        if (errorCount != that.errorCount) {
-            return false;
-        }
-        if (normalCount != that.normalCount) {
-            return false;
-        }
-        return commandState == that.commandState;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = errorCount;
-        result = 31 * result + normalCount;
-        result = 31 * result + (commandState != null ? commandState.hashCode() : 0);
-        return result;
     }
 }

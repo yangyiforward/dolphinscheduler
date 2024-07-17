@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.utils;
 
 import org.apache.dolphinscheduler.api.enums.Status;
@@ -27,7 +26,6 @@ import java.text.MessageFormat;
  * @param <T> T
  */
 public class Result<T> {
-
     /**
      * status
      */
@@ -51,17 +49,16 @@ public class Result<T> {
         this.msg = msg;
     }
 
-    public Result(Status status) {
+    private Result(T data) {
+        this.code  = 0;
+        this.data = data;
+    }
+
+    private Result(Status status) {
         if (status != null) {
             this.code = status.getCode();
             this.msg = status.getMsg();
         }
-    }
-
-    public Result(Integer code, String msg, T data) {
-        this.code = code;
-        this.msg = msg;
-        this.data = data;
     }
 
     /**
@@ -72,23 +69,7 @@ public class Result<T> {
      * @return resule
      */
     public static <T> Result<T> success(T data) {
-        return new Result<>(Status.SUCCESS.getCode(), Status.SUCCESS.getMsg(), data);
-    }
-
-    public static <T> Result<T> success() {
-        return success(null);
-    }
-
-    public boolean isSuccess() {
-        return this.isStatus(Status.SUCCESS);
-    }
-
-    public boolean isFailed() {
-        return !this.isSuccess();
-    }
-
-    public boolean isStatus(Status status) {
-        return this.code != null && this.code.equals(status.getCode());
+        return new Result<>(data);
     }
 
     /**
@@ -97,8 +78,8 @@ public class Result<T> {
      * @param status status
      * @return result
      */
-    public static <T> Result<T> error(Status status) {
-        return new Result<>(status);
+    public static Result error(Status status) {
+        return new Result(status);
     }
 
     /**
@@ -108,8 +89,8 @@ public class Result<T> {
      * @param args args
      * @return result
      */
-    public static <T> Result<T> errorWithArgs(Status status, Object... args) {
-        return new Result<>(status.getCode(), MessageFormat.format(status.getMsg(), args));
+    public static Result errorWithArgs(Status status, Object... args) {
+        return new Result(status.getCode(), MessageFormat.format(status.getMsg(), args));
     }
 
     public Integer getCode() {
@@ -136,17 +117,13 @@ public class Result<T> {
         this.data = data;
     }
 
+
     @Override
     public String toString() {
-        return "Status{"
-                + "code='" + code
-                + '\'' + ", msg='"
-                + msg + '\''
-                + ", data=" + data
-                + '}';
-    }
-
-    public Boolean checkResult() {
-        return this.code == Status.SUCCESS.getCode();
+        return "Status{" +
+                "code='" + code + '\'' +
+                ", msg='" + msg + '\'' +
+                ", data=" + data +
+                '}';
     }
 }

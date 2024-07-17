@@ -16,38 +16,48 @@
  */
 package org.apache.dolphinscheduler.api.utils;
 
-import org.apache.commons.io.IOUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import lombok.extern.slf4j.Slf4j;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
  * file utils
  */
-@Slf4j
 public class FileUtils {
+    private static final Logger logger = LoggerFactory.getLogger(FileUtils.class);
 
     /**
-     * copy source InputStream to target file
-     * @param file
-     * @param destFilename
+     * copy source file to target file
+     *
+     * @param file         file
+     * @param destFilename destination file name
      */
-    public static void copyInputStreamToFile(MultipartFile file, String destFilename) {
+
+    public static void copyFile(MultipartFile file, String destFilename) {
         try {
-            org.apache.commons.io.FileUtils.copyInputStreamToFile(file.getInputStream(), new File(destFilename));
+
+            File destFile = new File(destFilename);
+            File destParentDir = new File(destFile.getParent());
+
+            if (!destParentDir.exists()) {
+                org.apache.commons.io.FileUtils.forceMkdir(destParentDir);
+            }
+
+            Files.copy(file.getInputStream(), Paths.get(destFilename));
         } catch (IOException e) {
-            log.error("failed to copy file , {} is empty file", file.getOriginalFilename(), e);
+            logger.error("failed to copy file , {} is empty file", file.getOriginalFilename(), e);
         }
     }
 
@@ -65,7 +75,8 @@ public class FileUtils {
         if (resource.exists() || resource.isReadable()) {
             return resource;
         } else {
-            log.error("File can not be read, fileName:{}", filename);
+            logger.error("file can not read : {}", filename);
+
         }
         return null;
     }
@@ -76,12 +87,20 @@ public class FileUtils {
      * @return file content string
      */
     public static String file2String(MultipartFile file) {
-        try (InputStream inputStream = file.getInputStream()) {
-            return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+        StringBuilder strBuilder = new StringBuilder();
+
+        try (InputStreamReader inputStreamReader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
+            BufferedReader streamReader = new BufferedReader(inputStreamReader);
+            String inputStr;
+
+            while ((inputStr = streamReader.readLine()) != null) {
+                strBuilder.append(inputStr);
+            }
+
         } catch (IOException e) {
-            log.error("file convert to string failed: {}", file.getName());
+            logger.error("file convert to string failed: {}", file.getName());
         }
 
-        return "";
+        return strBuilder.toString();
     }
 }

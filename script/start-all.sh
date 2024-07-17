@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -18,41 +18,42 @@
 
 workDir=`dirname $0`
 workDir=`cd ${workDir};pwd`
+source $workDir/../conf/config/install_config.conf
 
-source ${workDir}/env/install_env.sh
+declare -A workersGroupMap=()
 
 workersGroup=(${workers//,/ })
 for workerGroup in ${workersGroup[@]}
 do
   echo $workerGroup;
   worker=`echo $workerGroup|awk -F':' '{print $1}'`
-  workerNames+=($worker)
+  groupName=`echo $workerGroup|awk -F':' '{print $2}'`
+  workersGroupMap+=([$worker]=$groupName)
 done
+
+skywalkingEnv="SKYWALKING_ENABLE=$enableSkywalking SW_AGENT_COLLECTOR_BACKEND_SERVICES=$skywalkingServers SW_GRPC_LOG_SERVER_HOST=$skywalkingLogReporterHost SW_GRPC_LOG_SERVER_PORT=$skywalkingLogReporterPort"
 
 mastersHost=(${masters//,/ })
 for master in ${mastersHost[@]}
 do
   echo "$master master server is starting"
-	ssh -o StrictHostKeyChecking=no -p $sshPort $master  "cd $installPath/; bash bin/dolphinscheduler-daemon.sh start master-server;"
+	ssh -p $sshPort $master  "cd $installPath/; export $skywalkingEnv; sh bin/dolphinscheduler-daemon.sh start master-server;"
 
 done
 
-for worker in ${workerNames[@]}
+for worker in ${!workersGroupMap[*]}
 do
   echo "$worker worker server is starting"
 
-  ssh -o StrictHostKeyChecking=no -p $sshPort $worker  "cd $installPath/; bash bin/dolphinscheduler-daemon.sh start worker-server;"
+  ssh -p $sshPort $worker  "cd $installPath/; export $skywalkingEnv; sh bin/dolphinscheduler-daemon.sh start worker-server;"
+  ssh -p $sshPort $worker  "cd $installPath/; export $skywalkingEnv; sh bin/dolphinscheduler-daemon.sh start logger-server;"
 done
 
-ssh -o StrictHostKeyChecking=no -p $sshPort $alertServer  "cd $installPath/; bash bin/dolphinscheduler-daemon.sh start alert-server;"
+ssh -p $sshPort $alertServer  "cd $installPath/; export $skywalkingEnv; sh bin/dolphinscheduler-daemon.sh start alert-server;"
 
 apiServersHost=(${apiServers//,/ })
 for apiServer in ${apiServersHost[@]}
 do
-  echo "$apiServer api server is starting"
-  ssh -o StrictHostKeyChecking=no -p $sshPort $apiServer  "cd $installPath/; bash bin/dolphinscheduler-daemon.sh start api-server;"
+  echo "$apiServer worker server is starting"
+  ssh -p $sshPort $apiServer  "cd $installPath/; export $skywalkingEnv; sh bin/dolphinscheduler-daemon.sh start api-server;"
 done
-
-# query server status
-echo "query server status"
-cd $installPath/; bash bin/status-all.sh

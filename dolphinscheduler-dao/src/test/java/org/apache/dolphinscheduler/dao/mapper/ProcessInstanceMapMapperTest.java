@@ -14,30 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.mapper;
 
-import org.apache.dolphinscheduler.dao.BaseDaoTest;
+
 import org.apache.dolphinscheduler.dao.entity.ProcessInstanceMap;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@Transactional
+@Rollback(true)
+public class ProcessInstanceMapMapperTest {
 
-public class ProcessInstanceMapMapperTest extends BaseDaoTest {
 
     @Autowired
-    private ProcessInstanceMapMapper processInstanceMapMapper;
+    ProcessInstanceMapMapper processInstanceMapMapper;
+
 
     /**
      * insert
-     *
      * @return ProcessInstanceMap
      */
-    private ProcessInstanceMap insertOne() {
-        // insertOne
+    private ProcessInstanceMap insertOne(){
+        //insertOne
         ProcessInstanceMap processInstanceMap = new ProcessInstanceMap();
         processInstanceMap.setProcessInstanceId(0);
         processInstanceMap.setParentTaskInstanceId(0);
@@ -50,23 +58,23 @@ public class ProcessInstanceMapMapperTest extends BaseDaoTest {
      * test update
      */
     @Test
-    public void testUpdate() {
-        // insertOne
+    public void testUpdate(){
+        //insertOne
         ProcessInstanceMap processInstanceMap = insertOne();
-        // update
+        //update
         processInstanceMap.setParentProcessInstanceId(1);
         int update = processInstanceMapMapper.updateById(processInstanceMap);
-        Assertions.assertEquals(1, update);
+        Assert.assertEquals(1, update);
     }
 
     /**
      * test delete
      */
     @Test
-    public void testDelete() {
+    public void testDelete(){
         ProcessInstanceMap processInstanceMap = insertOne();
         int delete = processInstanceMapMapper.deleteById(processInstanceMap.getId());
-        Assertions.assertEquals(1, delete);
+        Assert.assertEquals(1, delete);
     }
 
     /**
@@ -75,9 +83,9 @@ public class ProcessInstanceMapMapperTest extends BaseDaoTest {
     @Test
     public void testQuery() {
         ProcessInstanceMap processInstanceMap = insertOne();
-        // query
+        //query
         List<ProcessInstanceMap> dataSources = processInstanceMapMapper.selectList(null);
-        Assertions.assertNotEquals(dataSources.size(), 0);
+        Assert.assertNotEquals(dataSources.size(), 0);
     }
 
     /**
@@ -90,7 +98,10 @@ public class ProcessInstanceMapMapperTest extends BaseDaoTest {
         processInstanceMap.setParentProcessInstanceId(100);
         processInstanceMapMapper.updateById(processInstanceMap);
 
+
     }
+
+
 
     /**
      * test delete by parent process instance id
@@ -102,8 +113,9 @@ public class ProcessInstanceMapMapperTest extends BaseDaoTest {
         processInstanceMap.setParentProcessInstanceId(100);
         processInstanceMapMapper.updateById(processInstanceMap);
         int delete = processInstanceMapMapper.deleteByParentProcessId(
-                processInstanceMap.getParentProcessInstanceId());
-        Assertions.assertEquals(1, delete);
+                processInstanceMap.getParentProcessInstanceId()
+        );
+        Assert.assertEquals(1, delete);
     }
 
     /**
@@ -118,10 +130,10 @@ public class ProcessInstanceMapMapperTest extends BaseDaoTest {
 
         processInstanceMapMapper.updateById(processInstanceMap);
 
-        List<Integer> subIds =
-                processInstanceMapMapper.querySubIdListByParentId(processInstanceMap.getParentProcessInstanceId());
+        List<Integer> subIds = processInstanceMapMapper.querySubIdListByParentId(processInstanceMap.getParentProcessInstanceId());
 
-        Assertions.assertNotEquals(subIds.size(), 0);
+        Assert.assertNotEquals(subIds.size(), 0);
+
 
     }
 }

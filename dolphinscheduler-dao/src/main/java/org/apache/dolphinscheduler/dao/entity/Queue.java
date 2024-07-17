@@ -16,23 +16,23 @@
  */
 package org.apache.dolphinscheduler.dao.entity;
 
-import java.util.Date;
-
-import lombok.Data;
-
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-@Data
+import java.util.Date;
+
+/**
+ * queue
+ */
 @TableName("t_ds_queue")
 public class Queue {
 
     /**
      * id
      */
-    @TableId(value = "id", type = IdType.AUTO)
-    private Integer id;
+    @TableId(value="id", type=IdType.AUTO)
+    private int id;
     /**
      * queue name
      */
@@ -51,43 +51,66 @@ public class Queue {
      */
     private Date updateTime;
 
-    public Queue() {
+    public int getId() {
+        return id;
     }
 
-    public Queue(String queueName, String queue) {
-        Date now = new Date();
-        this.queueName = queueName;
-        this.queue = queue;
-        this.createTime = now;
-        this.updateTime = now;
-    }
-
-    public Queue(int id, String queueName, String queue) {
-        Date now = new Date();
+    public void setId(int id) {
         this.id = id;
+    }
+
+    public String getQueueName() {
+        return queueName;
+    }
+
+    public void setQueueName(String queueName) {
         this.queueName = queueName;
+    }
+
+    public String getQueue() {
+        return queue;
+    }
+
+    public void setQueue(String queue) {
         this.queue = queue;
-        this.createTime = now;
-        this.updateTime = now;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
+
+    public Date getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(Date updateTime) {
+        this.updateTime = updateTime;
+    }
+
+    @Override
+    public String toString() {
+        return "Queue{" +
+                "id=" + id +
+                ", queueName='" + queueName + '\'' +
+                ", queue='" + queue + '\'' +
+                ", createTime=" + createTime +
+                ", updateTime=" + updateTime +
+                '}';
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
         Queue queue1 = (Queue) o;
 
-        if (id != queue1.id) {
-            return false;
-        }
-        if (!queueName.equals(queue1.queueName)) {
-            return false;
-        }
+        if (id != queue1.id) return false;
+        if (!queueName.equals(queue1.queueName)) return false;
         return queue.equals(queue1.queue);
     }
 

@@ -14,27 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.service.queue;
 
-import org.apache.dolphinscheduler.service.exceptions.TaskPriorityQueueException;
-
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import org.springframework.stereotype.Service;
 
 /**
- * A singleton of a task queue implemented using PriorityBlockingQueue
+ * A singleton of a task queue implemented with zookeeper
+ * tasks queue implementation
  */
 @Service
 public class TaskPriorityQueueImpl implements TaskPriorityQueue<TaskPriority> {
+    /**
+     * queue size
+     */
+    private static final Integer QUEUE_MAX_SIZE = 3000;
 
     /**
-     * Task queue, this queue is unbounded, this means it will cause OutOfMemoryError.
-     * The master will stop to generate the task if memory is too high.
+     * queue
      */
-    private final PriorityBlockingQueue<TaskPriority> queue = new PriorityBlockingQueue<>(3000);
+    private PriorityBlockingQueue<TaskPriority> queue = new PriorityBlockingQueue<>(QUEUE_MAX_SIZE);
 
     /**
      * put task takePriorityInfo
@@ -50,35 +50,19 @@ public class TaskPriorityQueueImpl implements TaskPriorityQueue<TaskPriority> {
      * take taskInfo
      *
      * @return taskInfo
-     * @throws TaskPriorityQueueException
      */
     @Override
-    public TaskPriority take() throws TaskPriorityQueueException, InterruptedException {
+    public TaskPriority take() throws InterruptedException {
         return queue.take();
-    }
-
-    /**
-     * poll taskInfo with timeout
-     *
-     * @param timeout
-     * @param unit
-     * @return
-     * @throws TaskPriorityQueueException
-     * @throws InterruptedException
-     */
-    @Override
-    public TaskPriority poll(long timeout, TimeUnit unit) throws TaskPriorityQueueException, InterruptedException {
-        return queue.poll(timeout, unit);
     }
 
     /**
      * queue size
      *
      * @return size
-     * @throws TaskPriorityQueueException
      */
     @Override
-    public int size() throws TaskPriorityQueueException {
+    public int size() {
         return queue.size();
     }
 }

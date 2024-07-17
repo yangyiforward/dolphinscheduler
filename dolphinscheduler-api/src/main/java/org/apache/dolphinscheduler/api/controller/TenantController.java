@@ -14,52 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.controller;
 
-import static org.apache.dolphinscheduler.api.enums.Status.CREATE_TENANT_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.DELETE_TENANT_BY_ID_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.QUERY_TENANT_LIST_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.QUERY_TENANT_LIST_PAGING_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.UPDATE_TENANT_ERROR;
-import static org.apache.dolphinscheduler.api.enums.Status.VERIFY_OS_TENANT_CODE_ERROR;
 
-import org.apache.dolphinscheduler.api.aspect.AccessLogAnnotation;
+import org.apache.dolphinscheduler.api.enums.Status;
 import org.apache.dolphinscheduler.api.exceptions.ApiException;
 import org.apache.dolphinscheduler.api.service.TenantService;
 import org.apache.dolphinscheduler.api.utils.Result;
-import org.apache.dolphinscheduler.common.constants.Constants;
+import org.apache.dolphinscheduler.common.Constants;
+import org.apache.dolphinscheduler.common.utils.ParameterUtils;
 import org.apache.dolphinscheduler.dao.entity.User;
-import org.apache.dolphinscheduler.plugin.task.api.utils.ParameterUtils;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import static org.apache.dolphinscheduler.api.enums.Status.*;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.Parameters;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * tenant controller
  */
-@Tag(name = "TENANT_TAG")
+@Api(tags = "TENANT_TAG", position = 1)
 @RestController
-@RequestMapping("/tenants")
+@RequestMapping("/tenant")
 public class TenantController extends BaseController {
+
+    private static final Logger logger = LoggerFactory.getLogger(TenantController.class);
+
 
     @Autowired
     private TenantService tenantService;
@@ -67,63 +57,69 @@ public class TenantController extends BaseController {
     /**
      * create tenant
      *
-     * @param loginUser login user
-     * @param tenantCode tenant code
-     * @param queueId queue id
+     * @param loginUser   login user
+     * @param tenantCode  tenant code
+     * @param tenantName  tenant name
+     * @param queueId     queue id
      * @param description description
      * @return create result code
      */
-    @Operation(summary = "createTenant", description = "CREATE_TENANT_NOTES")
-    @Parameters({
-            @Parameter(name = "tenantCode", description = "TENANT_CODE", required = true, schema = @Schema(implementation = String.class)),
-            @Parameter(name = "queueId", description = "QUEUE_ID", required = true, schema = @Schema(implementation = int.class, example = "100")),
-            @Parameter(name = "description", description = "TENANT_DESC", schema = @Schema(implementation = String.class))
+    @ApiOperation(value = "createTenant", notes = "CREATE_TENANT_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "tenantCode", value = "TENANT_CODE", required = true, dataType = "String"),
+            @ApiImplicitParam(name = "tenantName", value = "TENANT_NAME", required = true, dataType = "String"),
+            @ApiImplicitParam(name = "queueId", value = "QUEUE_ID", required = true, dataType = "Int", example = "100"),
+            @ApiImplicitParam(name = "description", value = "TENANT_DESC", dataType = "String")
+
     })
-    @PostMapping()
+    @PostMapping(value = "/create")
     @ResponseStatus(HttpStatus.CREATED)
     @ApiException(CREATE_TENANT_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result createTenant(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+    public Result createTenant(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
                                @RequestParam(value = "tenantCode") String tenantCode,
+                               @RequestParam(value = "tenantName") String tenantName,
                                @RequestParam(value = "queueId") int queueId,
                                @RequestParam(value = "description", required = false) String description) throws Exception {
-
-        Map<String, Object> result = tenantService.createTenant(loginUser, tenantCode, queueId, description);
+        logger.info("login user {}, create tenant, tenantCode: {}, tenantName: {}, queueId: {}, desc: {}",
+                loginUser.getUserName(), tenantCode, tenantName, queueId, description);
+        Map<String, Object> result = tenantService.createTenant(loginUser, tenantCode, tenantName, queueId, description);
         return returnDataList(result);
     }
+
 
     /**
      * query tenant list paging
      *
      * @param loginUser login user
      * @param searchVal search value
-     * @param pageNo page number
-     * @param pageSize page size
+     * @param pageNo    page number
+     * @param pageSize  page size
      * @return tenant list page
      */
-    @Operation(summary = "queryTenantlistPaging", description = "QUERY_TENANT_LIST_PAGING_NOTES")
-    @Parameters({
-            @Parameter(name = "searchVal", description = "SEARCH_VAL", schema = @Schema(implementation = String.class)),
-            @Parameter(name = "pageNo", description = "PAGE_NO", required = true, schema = @Schema(implementation = int.class, example = "1")),
-            @Parameter(name = "pageSize", description = "PAGE_SIZE", required = true, schema = @Schema(implementation = int.class, example = "20"))
+    @ApiOperation(value = "queryTenantlistPaging", notes = "QUERY_TENANT_LIST_PAGING_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "searchVal", value = "SEARCH_VAL", dataType = "String"),
+            @ApiImplicitParam(name = "pageNo", value = "PAGE_NO", dataType = "Int", example = "1"),
+            @ApiImplicitParam(name = "pageSize", value = "PAGE_SIZE", dataType = "Int", example = "20")
     })
-    @GetMapping()
+    @GetMapping(value = "/list-paging")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(QUERY_TENANT_LIST_PAGING_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result queryTenantlistPaging(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
-                                        @RequestParam(value = "searchVal", required = false) String searchVal,
+    public Result queryTenantlistPaging(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
                                         @RequestParam("pageNo") Integer pageNo,
+                                        @RequestParam(value = "searchVal", required = false) String searchVal,
                                         @RequestParam("pageSize") Integer pageSize) {
-        Result result = checkPageParams(pageNo, pageSize);
-        if (!result.checkResult()) {
-            return result;
-
+        logger.info("login user {}, list paging, pageNo: {}, searchVal: {}, pageSize: {}",
+                loginUser.getUserName(), pageNo, searchVal, pageSize);
+        Map<String, Object> result = checkPageParams(pageNo, pageSize);
+        if (result.get(Constants.STATUS) != Status.SUCCESS) {
+            return returnDataListPaging(result);
         }
         searchVal = ParameterUtils.handleEscapes(searchVal);
         result = tenantService.queryTenantList(loginUser, searchVal, pageNo, pageSize);
-        return result;
+        return returnDataListPaging(result);
     }
+
 
     /**
      * tenant list
@@ -131,44 +127,49 @@ public class TenantController extends BaseController {
      * @param loginUser login user
      * @return tenant list
      */
-    @Operation(summary = "queryTenantlist", description = "QUERY_TENANT_LIST_NOTES")
+    @ApiOperation(value = "queryTenantlist", notes = "QUERY_TENANT_LIST_NOTES")
     @GetMapping(value = "/list")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(QUERY_TENANT_LIST_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result queryTenantlist(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser) {
+    public Result queryTenantlist(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser) {
+        logger.info("login user {}, query tenant list", loginUser.getUserName());
         Map<String, Object> result = tenantService.queryTenantList(loginUser);
         return returnDataList(result);
     }
 
+
     /**
-     * update tenant
+     * udpate tenant
      *
-     * @param loginUser login user
-     * @param id tenant id
-     * @param tenantCode tenant code
-     * @param queueId queue id
+     * @param loginUser   login user
+     * @param id          tennat id
+     * @param tenantCode  tennat code
+     * @param tenantName  tennat name
+     * @param queueId     queue id
      * @param description description
      * @return update result code
      */
-    @Operation(summary = "updateTenant", description = "UPDATE_TENANT_NOTES")
-    @Parameters({
-            @Parameter(name = "id", description = "TENANT_ID", required = true, schema = @Schema(implementation = int.class, example = "100")),
-            @Parameter(name = "tenantCode", description = "TENANT_CODE", required = true, schema = @Schema(implementation = String.class)),
-            @Parameter(name = "queueId", description = "QUEUE_ID", required = true, schema = @Schema(implementation = int.class, example = "100")),
-            @Parameter(name = "description", description = "TENANT_DESC", schema = @Schema(implementation = String.class))
+    @ApiOperation(value = "updateTenant", notes = "UPDATE_TENANT_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "ID", value = "TENANT_ID", required = true, dataType = "Int", example = "100"),
+            @ApiImplicitParam(name = "tenantCode", value = "TENANT_CODE", required = true, dataType = "String"),
+            @ApiImplicitParam(name = "tenantName", value = "TENANT_NAME", required = true, dataType = "String"),
+            @ApiImplicitParam(name = "queueId", value = "QUEUE_ID", required = true, dataType = "Int", example = "100"),
+            @ApiImplicitParam(name = "description", value = "TENANT_DESC", type = "String")
+
     })
-    @PutMapping(value = "/{id}")
+    @PostMapping(value = "/update")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(UPDATE_TENANT_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result updateTenant(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
-                               @PathVariable(value = "id") int id,
+    public Result updateTenant(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+                               @RequestParam(value = "id") int id,
                                @RequestParam(value = "tenantCode") String tenantCode,
+                               @RequestParam(value = "tenantName") String tenantName,
                                @RequestParam(value = "queueId") int queueId,
                                @RequestParam(value = "description", required = false) String description) throws Exception {
-
-        Map<String, Object> result = tenantService.updateTenant(loginUser, id, tenantCode, queueId, description);
+        logger.info("login user {}, updateProcessInstance tenant, tenantCode: {}, tenantName: {}, queueId: {}, description: {}",
+                loginUser.getUserName(), tenantCode, tenantName, queueId, description);
+        Map<String, Object> result = tenantService.updateTenant(loginUser, id, tenantCode, tenantName, queueId, description);
         return returnDataList(result);
     }
 
@@ -176,41 +177,46 @@ public class TenantController extends BaseController {
      * delete tenant by id
      *
      * @param loginUser login user
-     * @param id tenant id
+     * @param id        tenant id
      * @return delete result code
      */
-    @Operation(summary = "deleteTenantById", description = "DELETE_TENANT_NOTES")
-    @Parameters({
-            @Parameter(name = "id", description = "TENANT_ID", required = true, schema = @Schema(implementation = int.class, example = "100"))
+    @ApiOperation(value = "deleteTenantById", notes = "DELETE_TENANT_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "ID", value = "TENANT_ID", required = true, dataType = "Int", example = "100")
+
     })
-    @DeleteMapping(value = "/{id}")
+    @PostMapping(value = "/delete")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(DELETE_TENANT_BY_ID_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result deleteTenantById(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
-                                   @PathVariable(value = "id") int id) throws Exception {
+    public Result deleteTenantById(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+                                   @RequestParam(value = "id") int id) throws Exception {
+        logger.info("login user {}, delete tenant, tenantId: {},", loginUser.getUserName(), id);
         Map<String, Object> result = tenantService.deleteTenantById(loginUser, id);
         return returnDataList(result);
     }
 
+
     /**
      * verify tenant code
      *
-     * @param loginUser login user
+     * @param loginUser  login user
      * @param tenantCode tenant code
-     * @return true if tenant code can use, otherwise return false
+     * @return true if tenant code can user, otherwise return false
      */
-    @Operation(summary = "verifyTenantCode", description = "VERIFY_TENANT_CODE_NOTES")
-    @Parameters({
-            @Parameter(name = "tenantCode", description = "TENANT_CODE", required = true, schema = @Schema(implementation = String.class))
+    @ApiOperation(value = "verifyTenantCode", notes = "VERIFY_TENANT_CODE_NOTES")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "tenantCode", value = "TENANT_CODE", required = true, dataType = "String")
     })
-    @GetMapping(value = "/verify-code")
+    @GetMapping(value = "/verify-tenant-code")
     @ResponseStatus(HttpStatus.OK)
-    @ApiException(VERIFY_OS_TENANT_CODE_ERROR)
-    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
-    public Result verifyTenantCode(@Parameter(hidden = true) @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
-                                   @RequestParam(value = "tenantCode") String tenantCode) {
+    @ApiException(VERIFY_TENANT_CODE_ERROR)
+    public Result verifyTenantCode(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+                                   @RequestParam(value = "tenantCode") String tenantCode
+    ) {
+        logger.info("login user {}, verfiy tenant code: {}",
+                loginUser.getUserName(), tenantCode);
         return tenantService.verifyTenantCode(tenantCode);
     }
+
 
 }

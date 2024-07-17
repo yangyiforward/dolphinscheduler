@@ -19,132 +19,97 @@ package org.apache.dolphinscheduler.remote.command;
 
 public enum CommandType {
 
-    GET_APP_ID_REQUEST,
-    GET_APP_ID_RESPONSE,
-
+    /**
+     * remove task log request,
+     */
     REMOVE_TAK_LOG_REQUEST,
 
+    /**
+     * remove task log response
+     */
     REMOVE_TAK_LOG_RESPONSE,
 
+    /**
+     *  roll view log request
+     */
     ROLL_VIEW_LOG_REQUEST,
 
+    /**
+     *  roll view log response
+     */
     ROLL_VIEW_LOG_RESPONSE,
 
+    /**
+     * view whole log request
+     */
     VIEW_WHOLE_LOG_REQUEST,
 
+    /**
+     * view whole log response
+     */
     VIEW_WHOLE_LOG_RESPONSE,
 
+    /**
+     * get log bytes request
+     */
     GET_LOG_BYTES_REQUEST,
 
+    /**
+     * get log bytes response
+     */
     GET_LOG_BYTES_RESPONSE,
+
 
     WORKER_REQUEST,
     MASTER_RESPONSE,
 
     /**
-     * task execute start, from api to master
+     * execute task request
      */
-    TASK_EXECUTE_START,
+    TASK_EXECUTE_REQUEST,
 
     /**
-     * dispatch task request
+     * execute task ack
      */
-    TASK_DISPATCH_REQUEST,
+    TASK_EXECUTE_ACK,
 
     /**
-     * task execute running, from worker to master
+     * execute task response
      */
-    TASK_EXECUTE_RUNNING,
+    TASK_EXECUTE_RESPONSE,
 
     /**
-     * task execute running ack, from master to worker
+     * db task ack
      */
-    TASK_EXECUTE_RUNNING_ACK,
+    DB_TASK_ACK,
 
     /**
-     * task execute response, from worker to master
+     * db task response
      */
-    TASK_EXECUTE_RESULT,
+    DB_TASK_RESPONSE,
 
     /**
-     * task execute response ack, from master to worker
+     * kill task
      */
-    TASK_EXECUTE_RESULT_ACK,
-
     TASK_KILL_REQUEST,
 
+    /**
+     * kill task response
+     */
     TASK_KILL_RESPONSE,
 
-    TASK_REJECT,
-
-    TASK_REJECT_ACK,
-
     /**
-     * task savepoint, for stream task
+     * HEART_BEAT
      */
-    TASK_SAVEPOINT_REQUEST,
-
-    /**
-     * task savepoint ack, for stream task
-     */
-    TASK_SAVEPOINT_RESPONSE,
-
     HEART_BEAT,
 
+    /**
+     * ping
+     */
     PING,
 
-    PONG,
-
-    ALERT_SEND_REQUEST,
-
-    ALERT_SEND_RESPONSE,
-
     /**
-     * process host update
+     *  pong
      */
-    PROCESS_HOST_UPDATE_REQUEST,
-
-    /**
-     * process host update response
-     */
-    PROCESS_HOST_UPDATE_RESPONSE,
-
-    /**
-     * state event request
-     */
-    STATE_EVENT_REQUEST,
-    /**
-     * cache expire
-     */
-    CACHE_EXPIRE,
-    /**
-     * task state event request
-     */
-    TASK_FORCE_STATE_EVENT_REQUEST,
-    /**
-     * task state event request
-     */
-    TASK_WAKEUP_EVENT_REQUEST,
-
-    /**
-     * workflow executing data request, from api to master
-     */
-    WORKFLOW_EXECUTING_DATA_REQUEST,
-
-    /**
-     * update taskInstance's PID request
-     */
-    TASK_UPDATE_PID,
-
-    /**
-     * update taskInstance's PID response ack, from master to worker
-     */
-    TASK_UPDATE_PID_ACK,
-
-    /**
-     * workflow executing data response, from master to api
-     */
-    WORKFLOW_EXECUTING_DATA_RESPONSE,
-
-    WORKFLOW_METRICS_CLEANUP;
+    PONG;
 }

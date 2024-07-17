@@ -14,47 +14,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.upgrade;
 
+
+import org.junit.Test;
+
+import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.sql.DataSource;
+import static org.apache.dolphinscheduler.dao.upgrade.UpgradeDao.getDataSource;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.junit.Assert.assertThat;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ActiveProfiles;
-
-@ActiveProfiles("h2")
 public class ProcessDefinitionDaoTest {
-
-    @Autowired
-    private DataSource dataSource;
+    final DataSource dataSource = getDataSource();
     final ProcessDefinitionDao processDefinitionDao = new ProcessDefinitionDao();
 
     @Test
-    public void testQueryAllProcessDefinition() {
-        // Map<Integer, String> processDefinitionJsonMap =
-        // processDefinitionDao.queryAllProcessDefinition(dataSource.getConnection());
-        // assertThat(processDefinitionJsonMap.size(),greaterThanOrEqualTo(0));
+    public void testQueryAllProcessDefinition() throws Exception{
+
+        Map<Integer, String> processDefinitionJsonMap = processDefinitionDao.queryAllProcessDefinition(dataSource.getConnection());
+
+        assertThat(processDefinitionJsonMap.size(),greaterThanOrEqualTo(0));
     }
 
     @Test
-    public void testUpdateProcessDefinitionJson() {
-        Map<Integer, String> processDefinitionJsonMap = new HashMap<>();
-        processDefinitionJsonMap.put(1, "test");
-        // processDefinitionDao.updateProcessDefinitionJson(dataSource.getConnection(),processDefinitionJsonMap);
+    public void testUpdateProcessDefinitionJson() throws Exception{
+
+        Map<Integer,String> processDefinitionJsonMap = new HashMap<>();
+        processDefinitionJsonMap.put(1,"test");
+
+        processDefinitionDao.updateProcessDefinitionJson(dataSource.getConnection(),processDefinitionJsonMap);
+
     }
 
-    @Test
-    public void testQueryAllProcessDefinitionException() {
-        // processDefinitionDao.queryAllProcessDefinition(null);
+    @Test(expected = Exception.class)
+    public void testQueryAllProcessDefinitionException() throws Exception{
+        processDefinitionDao.queryAllProcessDefinition(null);
+
     }
 
-    @Test
-    public void testUpdateProcessDefinitionJsonException() {
-        Assertions.assertThrows(Exception.class, () -> processDefinitionDao.updateProcessDefinitionJson(null, null));
+    @Test(expected = Exception.class)
+    public void testUpdateProcessDefinitionJsonException() throws Exception{
+        processDefinitionDao.updateProcessDefinitionJson(null,null);
+
     }
+
+
 }

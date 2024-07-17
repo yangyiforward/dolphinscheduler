@@ -14,26 +14,60 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.service;
 
-import org.apache.dolphinscheduler.api.dto.taskInstance.TaskInstanceRemoveCacheResponse;
-import org.apache.dolphinscheduler.api.utils.Result;
-import org.apache.dolphinscheduler.common.enums.TaskExecuteType;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.apache.dolphinscheduler.api.enums.Status;
+import org.apache.dolphinscheduler.api.utils.PageInfo;
+import org.apache.dolphinscheduler.common.Constants;
+import org.apache.dolphinscheduler.common.enums.ExecutionStatus;
+import org.apache.dolphinscheduler.common.utils.CollectionUtils;
+import org.apache.dolphinscheduler.common.utils.DateUtils;
+import org.apache.dolphinscheduler.common.utils.StringUtils;
+import org.apache.dolphinscheduler.dao.entity.Project;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.dao.entity.User;
-import org.apache.dolphinscheduler.plugin.task.api.enums.TaskExecutionStatus;
+import org.apache.dolphinscheduler.dao.mapper.ProjectMapper;
+import org.apache.dolphinscheduler.dao.mapper.TaskInstanceMapper;
+import org.apache.dolphinscheduler.service.process.ProcessService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.text.MessageFormat;
+import java.util.*;
 
 /**
  * task instance service
  */
-public interface TaskInstanceService {
+@Service
+public class TaskInstanceService extends BaseService {
+
+    @Autowired
+    ProjectMapper projectMapper;
+
+    @Autowired
+    ProjectService projectService;
+
+    @Autowired
+    ProcessService processService;
+
+    @Autowired
+    TaskInstanceMapper taskInstanceMapper;
+
+    @Autowired
+    ProcessInstanceService processInstanceService;
+
+    @Autowired
+    UsersService usersService;
+
 
     /**
      * query task list by project, process instance, task name, task start time, task end time, task status, keyword paging
      *
      * @param loginUser login user
-     * @param projectCode project code
+     * @param projectName project name
      * @param processInstanceId process instance id
      * @param searchVal search value
      * @param taskName task name
@@ -41,75 +75,59 @@ public interface TaskInstanceService {
      * @param host host
      * @param startDate start time
      * @param endDate end time
-     * @param taskExecuteType task execute type
      * @param pageNo page number
      * @param pageSize page size
      * @return task list page
      */
-    Result queryTaskListPaging(User loginUser,
-                               long projectCode,
-                               Integer processInstanceId,
-                               String processInstanceName,
-                               String processDefinitionName,
-                               String taskName,
-                               String executorName,
-                               String startDate,
-                               String endDate,
-                               String searchVal,
-                               TaskExecutionStatus stateType,
-                               String host,
-                               TaskExecuteType taskExecuteType,
-                               Integer pageNo,
-                               Integer pageSize);
+    public Map<String,Object> queryTaskListPaging(User loginUser, String projectName,
+                                                  Integer processInstanceId, String taskName, String executorName, String startDate,
+                                                  String endDate, String searchVal, ExecutionStatus stateType,String host,
+                                                  Integer pageNo, Integer pageSize) {
+        Map<String, Object> result = new HashMap<>(5);
+        Project project = projectMapper.queryByName(projectName);
 
-    /**
-     * change one task instance's state from failure to forced success
-     *
-     * @param loginUser login user
-     * @param projectCode project code
-     * @param taskInstanceId task instance id
-     * @return the result code and msg
-     */
-    Result forceTaskSuccess(User loginUser,
-                            long projectCode,
-                            Integer taskInstanceId);
+        Map<String, Object> checkResult = projectService.checkProjectAndAuth(loginUser, project, projectName);
+        Status status = (Status) checkResult.get(Constants.STATUS);
+        if (status != Status.SUCCESS) {
+            return checkResult;
+        }
 
-    /**
-     * task savepoint
-     * @param loginUser
-     * @param projectCode
-     * @param taskInstanceId
-     * @return
-     */
-    Result taskSavePoint(User loginUser, long projectCode, Integer taskInstanceId);
+        int[] statusArray = null;
+        if(stateType != null){
+            statusArray = new int[]{stateType.ordinal()};
+        }
 
-    /**
-     * stop task
-     * @param loginUser
-     * @param projectCode
-     * @param taskInstanceId
-     * @return
-     */
-    Result stopTask(User loginUser, long projectCode, Integer taskInstanceId);
+        Map<String, Object> checkAndParseDateResult = checkAndParseDateParameters(startDate, endDate);
+        if (checkAndParseDateResult.get(Constants.STATUS) != Status.SUCCESS) {
+            return checkAndParseDateResult;
+        }
+        Date start = (Date) checkAndParseDateResult.get(Constants.START_TIME);
+        Date end = (Date) checkAndParseDateResult.get(Constants.END_TIME);
 
-    /**
-     * query taskInstance by taskInstanceCode
-     *
-     * @param loginUser   login user
-     * @param projectCode project code
-     * @param taskInstanceId taskInstance id
-     * @return the result code and msg
-     */
-    TaskInstance queryTaskInstanceById(User loginUser, long projectCode, Long taskInstanceId);
+        Page<TaskInstance> page = new Page(pageNo, pageSize);
+        PageInfo pageInfo = new PageInfo<TaskInstance>(pageNo, pageSize);
+        int executorId = usersService.getUserIdByName(executorName);
 
-    /**
-     * remove task instance cache
-     * @param loginUser
-     * @param projectCode
-     * @param taskInstanceId
-     * @return
-     */
-    TaskInstanceRemoveCacheResponse removeTaskInstanceCache(User loginUser, long projectCode, Integer taskInstanceId);
+        IPage<TaskInstance> taskInstanceIPage = taskInstanceMapper.queryTaskInstanceListPaging(
+                page, project.getId(), processInstanceId, searchVal, taskName, executorId, statusArray, host, start, end
+        );
+        Set<String> exclusionSet = new HashSet<>();
+        exclusionSet.add(Constants.CLASS);
+        exclusionSet.add("taskJson");
+        List<TaskInstance> taskInstanceList = taskInstanceIPage.getRecords();
 
-    void deleteByWorkflowInstanceId(Integer workflowInstanceId);
+        for(TaskInstance taskInstance : taskInstanceList){
+            taskInstance.setDuration(DateUtils.format2Duration(taskInstance.getStartTime(), taskInstance.getEndTime()));
+            User executor = usersService.queryUser(taskInstance.getExecutorId());
+            if (null != executor) {
+                taskInstance.setExecutorName(executor.getUserName());
+            }
+        }
+        pageInfo.setTotalCount((int)taskInstanceIPage.getTotal());
+        pageInfo.setLists(CollectionUtils.getListByExclusion(taskInstanceIPage.getRecords(),exclusionSet));
+        result.put(Constants.DATA_LIST, pageInfo);
+        putMsg(result, Status.SUCCESS);
+
+        return result;
+    }
 }

@@ -17,24 +17,59 @@
 
 package org.apache.dolphinscheduler.api.utils;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.dolphinscheduler.api.enums.Status;
-import org.apache.dolphinscheduler.common.constants.Constants;
+import org.apache.dolphinscheduler.common.Constants;
+import org.apache.dolphinscheduler.common.enums.ProgramType;
+import org.apache.dolphinscheduler.common.enums.TaskType;
+import org.apache.dolphinscheduler.common.process.ResourceInfo;
+import org.apache.dolphinscheduler.common.task.datax.DataxParameters;
+import org.apache.dolphinscheduler.common.task.dependent.DependentParameters;
+import org.apache.dolphinscheduler.common.task.flink.FlinkParameters;
+import org.apache.dolphinscheduler.common.task.http.HttpParameters;
+import org.apache.dolphinscheduler.common.task.mr.MapReduceParameters;
+import org.apache.dolphinscheduler.common.task.procedure.ProcedureParameters;
+import org.apache.dolphinscheduler.common.task.python.PythonParameters;
+import org.apache.dolphinscheduler.common.task.shell.ShellParameters;
+import org.apache.dolphinscheduler.common.task.spark.SparkParameters;
+import org.apache.dolphinscheduler.common.task.sql.SqlParameters;
+import org.apache.dolphinscheduler.common.task.subprocess.SubProcessParameters;
+import org.apache.dolphinscheduler.common.utils.JSONUtils;
 
 import java.util.Map;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CheckUtilsTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(CheckUtilsTest.class);
+
+    @Before
+    public void setUp() throws Exception {
+    }
+
+    @After
+    public void tearDown() throws Exception {
+    }
 
     /**
      * check username
      */
     @Test
     public void testCheckUserName() {
-        Assertions.assertTrue(CheckUtils.checkUserName("test01"));
-        Assertions.assertFalse(CheckUtils.checkUserName(null));
-        Assertions.assertFalse(CheckUtils.checkUserName("test01@abc"));
+
+        assertTrue(CheckUtils.checkUserName("test01"));
+
+        assertFalse(CheckUtils.checkUserName(null));
+
+        assertFalse(CheckUtils.checkUserName("test01@abc"));
     }
 
     /**
@@ -42,10 +77,10 @@ public class CheckUtilsTest {
      */
     @Test
     public void testCheckEmail() {
-        Assertions.assertTrue(CheckUtils.checkEmail("test01@gmail.com"));
-        Assertions.assertFalse(CheckUtils.checkEmail("test01@gmail"));
-        Assertions.assertFalse(CheckUtils.checkEmail("test01@gmail."));
-        Assertions.assertTrue(CheckUtils.checkEmail("test01@gmail.edu.cn"));
+
+        assertTrue(CheckUtils.checkEmail("test01@gmail.com"));
+
+        assertFalse(CheckUtils.checkEmail("test01@gmail"));
     }
 
     /**
@@ -53,32 +88,35 @@ public class CheckUtilsTest {
      */
     @Test
     public void testCheckDesc() {
+
         Map<String, Object> objectMap = CheckUtils.checkDesc("I am desc");
         Status status = (Status) objectMap.get(Constants.STATUS);
-        Assertions.assertEquals(status.getCode(), Status.SUCCESS.getCode());
+
+        assertEquals(status.getCode(),Status.SUCCESS.getCode());
+
     }
 
     @Test
     public void testCheckOtherParams() {
-        Assertions.assertFalse(CheckUtils.checkOtherParams(null));
-        Assertions.assertFalse(CheckUtils.checkOtherParams(""));
-        Assertions.assertTrue(CheckUtils.checkOtherParams("xxx"));
-        Assertions.assertFalse(CheckUtils.checkOtherParams("{}"));
-        Assertions.assertFalse(CheckUtils.checkOtherParams("{\"key1\":111}"));
+        assertFalse(CheckUtils.checkOtherParams(null));
+        assertFalse(CheckUtils.checkOtherParams(""));
+        assertTrue(CheckUtils.checkOtherParams("xxx"));
+        assertFalse(CheckUtils.checkOtherParams("{}"));
+        assertFalse(CheckUtils.checkOtherParams("{\"key1\":111}"));
     }
-
     /**
      * check passwd
      */
     @Test
     public void testCheckPassword() {
-        Assertions.assertFalse(CheckUtils.checkPassword(null));
-        Assertions.assertFalse(CheckUtils.checkPassword("a"));
-        Assertions.assertFalse(CheckUtils.checkPassword("1234567890abcderfasdf2"));
-        Assertions.assertTrue(CheckUtils.checkPassword("123456"));
-        Assertions.assertFalse(CheckUtils.checkPasswordLength("1"));
-        Assertions.assertTrue(CheckUtils.checkPasswordLength("dolphinscheduler123"));
-        Assertions.assertFalse(CheckUtils.checkPasswordLength("dolphinscheduler123456"));
+
+        assertFalse(CheckUtils.checkPassword(null));
+
+        assertFalse(CheckUtils.checkPassword("a"));
+
+        assertFalse(CheckUtils.checkPassword("1234567890abcderfasdf2"));
+
+        assertTrue(CheckUtils.checkPassword("123456"));
     }
 
     /**
@@ -86,10 +124,103 @@ public class CheckUtilsTest {
      */
     @Test
     public void testCheckPhone() {
+
         // phone can be null
-        Assertions.assertTrue(CheckUtils.checkPhone(null));
-        Assertions.assertFalse(CheckUtils.checkPhone("14567134578654"));
-        Assertions.assertTrue(CheckUtils.checkPhone("17362537263"));
+        assertTrue(CheckUtils.checkPhone(null));
+
+        assertFalse(CheckUtils.checkPhone("14567134578654"));
+
+        assertTrue(CheckUtils.checkPhone("17362537263"));
+    }
+    @Test
+    public void testCheckTaskNodeParameters() {
+
+        assertFalse(CheckUtils.checkTaskNodeParameters(null,null));
+        assertFalse(CheckUtils.checkTaskNodeParameters(null,"unKnown"));
+        assertFalse(CheckUtils.checkTaskNodeParameters("unKnown","unKnown"));
+        assertFalse(CheckUtils.checkTaskNodeParameters("unKnown",null));
+
+        // sub SubProcessParameters
+        SubProcessParameters subProcessParameters = new SubProcessParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(subProcessParameters), TaskType.SUB_PROCESS.toString()));
+        subProcessParameters.setProcessDefinitionId(1234);
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(subProcessParameters), TaskType.SUB_PROCESS.toString()));
+
+        // ShellParameters
+        ShellParameters shellParameters = new ShellParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(shellParameters), TaskType.SHELL.toString()));
+        shellParameters.setRawScript("");
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(shellParameters), TaskType.SHELL.toString()));
+        shellParameters.setRawScript("sss");
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(shellParameters), TaskType.SHELL.toString()));
+
+        // ProcedureParameters
+        ProcedureParameters procedureParameters = new ProcedureParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(procedureParameters), TaskType.PROCEDURE.toString()));
+        procedureParameters.setDatasource(1);
+        procedureParameters.setType("xx");
+        procedureParameters.setMethod("yy");
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(procedureParameters), TaskType.PROCEDURE.toString()));
+
+        // SqlParameters
+        SqlParameters sqlParameters = new SqlParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(sqlParameters), TaskType.SQL.toString()));
+        sqlParameters.setDatasource(1);
+        sqlParameters.setType("xx");
+        sqlParameters.setSql("yy");
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(sqlParameters), TaskType.SQL.toString()));
+
+        // MapReduceParameters
+        MapReduceParameters mapreduceParameters = new MapReduceParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(mapreduceParameters), TaskType.MR.toString()));
+
+        ResourceInfo resourceInfoMapreduce = new ResourceInfo();
+        resourceInfoMapreduce.setId(1);
+        resourceInfoMapreduce.setRes("");
+        mapreduceParameters.setMainJar(resourceInfoMapreduce);
+        mapreduceParameters.setProgramType(ProgramType.JAVA);
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(mapreduceParameters), TaskType.MR.toString()));
+
+        // SparkParameters
+        SparkParameters sparkParameters = new SparkParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(sparkParameters), TaskType.SPARK.toString()));
+        sparkParameters.setMainJar(new ResourceInfo());
+        sparkParameters.setProgramType(ProgramType.SCALA);
+        sparkParameters.setSparkVersion("1.1.1");
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(sparkParameters), TaskType.SPARK.toString()));
+
+        // PythonParameters
+        PythonParameters pythonParameters = new PythonParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(pythonParameters), TaskType.PYTHON.toString()));
+        pythonParameters.setRawScript("ss");
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(pythonParameters), TaskType.PYTHON.toString()));
+
+        // DependentParameters
+        DependentParameters dependentParameters = new DependentParameters();
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(dependentParameters), TaskType.DEPENDENT.toString()));
+
+        // FlinkParameters
+        FlinkParameters flinkParameters = new FlinkParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(flinkParameters), TaskType.FLINK.toString()));
+        flinkParameters.setMainJar(new ResourceInfo());
+        flinkParameters.setProgramType(ProgramType.JAVA);
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(flinkParameters), TaskType.FLINK.toString()));
+
+        // HTTP
+        HttpParameters httpParameters = new HttpParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(httpParameters), TaskType.HTTP.toString()));
+        httpParameters.setUrl("httpUrl");
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(httpParameters), TaskType.HTTP.toString()));
+
+        // DataxParameters
+        DataxParameters dataxParameters = new DataxParameters();
+        assertFalse(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(dataxParameters), TaskType.DATAX.toString()));
+        dataxParameters.setCustomConfig(0);
+        dataxParameters.setDataSource(111);
+        dataxParameters.setDataTarget(333);
+        dataxParameters.setSql("sql");
+        dataxParameters.setTargetTable("tar");
+        assertTrue(CheckUtils.checkTaskNodeParameters(JSONUtils.toJsonString(dataxParameters), TaskType.DATAX.toString()));
     }
 
 }

@@ -14,18 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.mapper;
 
 import org.apache.dolphinscheduler.dao.entity.DataSource;
-
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
-
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 /**
  * datasource mapper interface
@@ -33,13 +29,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 public interface DataSourceMapper extends BaseMapper<DataSource> {
 
     /**
-     * query online/testDatasource by type
+     * query datasource by type
      * @param userId userId
      * @param type type
      * @return datasource list
      */
-    List<DataSource> queryDataSourceByType(@Param("userId") int userId, @Param("type") Integer type,
-                                           @Param("testFlag") int testFlag);
+    List<DataSource> queryDataSourceByType(@Param("userId") int userId, @Param("type") Integer type);
 
     /**
      * datasource page
@@ -58,6 +53,7 @@ public interface DataSourceMapper extends BaseMapper<DataSource> {
      * @return datasource list
      */
     List<DataSource> queryDataSourceByName(@Param("name") String name);
+
 
     /**
      * query authed datasource
@@ -80,6 +76,7 @@ public interface DataSourceMapper extends BaseMapper<DataSource> {
      */
     List<DataSource> listAllDataSourceByType(@Param("type") Integer type);
 
+
     /**
      * list authorized UDF function
      *
@@ -88,40 +85,7 @@ public interface DataSourceMapper extends BaseMapper<DataSource> {
      * @param <T> T
      * @return UDF function list
      */
-    <T> List<DataSource> listAuthorizedDataSource(@Param("userId") int userId,
-                                                  @Param("dataSourceIds") T[] dataSourceIds);
+    <T> List<DataSource> listAuthorizedDataSource(@Param("userId") int userId,@Param("dataSourceIds")T[] dataSourceIds);
 
-    /**
-     * query datasource by name and user id
-     *
-     * @param userId userId
-     * @param name   datasource name
-     * @return If the name does not exist or the user does not have permission, it will return null
-     */
-    DataSource queryDataSourceByNameAndUserId(@Param("userId") int userId, @Param("name") String name);
 
-    /**
-     * selectPagingByIds
-     * @param dataSourcePage
-     * @param ids
-     * @param searchVal
-     * @return
-     */
-    IPage<DataSource> selectPagingByIds(Page<DataSource> dataSourcePage,
-                                        @Param("dataSourceIds") List<Integer> dataSourceIds,
-                                        @Param("name") String name);
-
-    /**
-     * clearBindTestId
-     * @param bindTestId
-     * @return
-     */
-    void clearBindTestId(@Param("bindTestId") Integer bindTestId);
-
-    /**
-     * queryTestDataSourceId
-     * @param onlineDataSourceId
-     * @return Integer
-     */
-    Integer queryTestDataSourceId(@Param("dataSourceId") Integer onlineDataSourceId);
 }

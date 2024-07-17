@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.dto.resources.visitor;
 
 import org.apache.dolphinscheduler.api.dto.resources.ResourceComponent;
@@ -23,10 +22,9 @@ import org.apache.dolphinscheduler.api.dto.resources.ResourceComponent;
  * Visitor
  */
 public interface Visitor {
-
     /**
      * visit
      * @return resource component
      */
-    ResourceComponent visit(String rootPath);
+    ResourceComponent visit();
 }

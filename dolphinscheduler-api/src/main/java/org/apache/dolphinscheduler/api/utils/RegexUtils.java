@@ -17,8 +17,7 @@
 
 package org.apache.dolphinscheduler.api.utils;
 
-import org.apache.commons.lang3.StringUtils;
-
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -26,23 +25,29 @@ import java.util.regex.Pattern;
  */
 public class RegexUtils {
 
-    private static final Pattern LINUX_USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_].{0,30}");
+    /**
+     * check number regex expression
+     */
+    private static final String CHECK_NUMBER = "^-?\\d+(\\.\\d+)?$";
 
     private RegexUtils() {
     }
 
     /**
-     * check if the input is a valid linux username
+     * check if the input is number
+     *
      * @param str input
-     * @return boolean
+     * @return
      */
-    public static boolean isValidLinuxUserName(String str) {
-        return LINUX_USERNAME_PATTERN.matcher(str).matches();
+    public static boolean isNumeric(String str) {
+        Pattern pattern = Pattern.compile(CHECK_NUMBER);
+        Matcher isNum = pattern.matcher(str);
+        return isNum.matches();
     }
 
     public static String escapeNRT(String str) {
         // Logging should not be vulnerable to injection attacks: Replace pattern-breaking characters
-        if (!StringUtils.isEmpty(str)) {
+        if (str != null && !str.isEmpty()) {
             return str.replaceAll("[\n|\r|\t]", "_");
         }
         return null;

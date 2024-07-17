@@ -17,16 +17,11 @@
 
 package org.apache.dolphinscheduler.service.queue;
 
-import org.apache.dolphinscheduler.common.constants.Constants;
-import org.apache.dolphinscheduler.plugin.task.api.TaskExecutionContext;
-
-import org.apache.commons.lang3.StringUtils;
-
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * task priority info
+ *  task priority info
  */
 public class TaskPriority implements Comparable<TaskPriority> {
 
@@ -51,11 +46,6 @@ public class TaskPriority implements Comparable<TaskPriority> {
     private int taskId;
 
     /**
-     * taskExecutionContext
-     */
-    private TaskExecutionContext taskExecutionContext;
-
-    /**
      * groupName
      */
     private String groupName;
@@ -63,31 +53,19 @@ public class TaskPriority implements Comparable<TaskPriority> {
     /**
      * context
      */
-    private Map<String, String> context;
+    private Map<String, Object> context;
 
-    /**
-     * checkpoint
-     */
-    private long checkpoint;
-
-    private int taskGroupPriority;
-
-    public TaskPriority() {
-        this.checkpoint = System.currentTimeMillis();
-    }
+    public TaskPriority(){}
 
     public TaskPriority(int processInstancePriority,
                         int processInstanceId,
                         int taskInstancePriority,
-                        int taskId,
-                        int taskGroupPriority, String groupName) {
+                        int taskId, String groupName) {
         this.processInstancePriority = processInstancePriority;
         this.processInstanceId = processInstanceId;
         this.taskInstancePriority = taskInstancePriority;
         this.taskId = taskId;
-        this.taskGroupPriority = taskGroupPriority;
         this.groupName = groupName;
-        this.checkpoint = System.currentTimeMillis();
     }
 
     public int getProcessInstancePriority() {
@@ -118,7 +96,7 @@ public class TaskPriority implements Comparable<TaskPriority> {
         return taskId;
     }
 
-    public Map<String, String> getContext() {
+    public Map<String, Object> getContext() {
         return context;
     }
 
@@ -134,32 +112,8 @@ public class TaskPriority implements Comparable<TaskPriority> {
         this.groupName = groupName;
     }
 
-    public void setContext(Map<String, String> context) {
+    public void setContext(Map<String, Object> context) {
         this.context = context;
-    }
-
-    public TaskExecutionContext getTaskExecutionContext() {
-        return taskExecutionContext;
-    }
-
-    public void setTaskExecutionContext(TaskExecutionContext taskExecutionContext) {
-        this.taskExecutionContext = taskExecutionContext;
-    }
-
-    public long getCheckpoint() {
-        return checkpoint;
-    }
-
-    public void setCheckpoint(long checkpoint) {
-        this.checkpoint = checkpoint;
-    }
-
-    public int getTaskGroupPriority() {
-        return taskGroupPriority;
-    }
-
-    public void setTaskGroupPriority(int taskGroupPriority) {
-        this.taskGroupPriority = taskGroupPriority;
     }
 
     @Override
@@ -184,25 +138,15 @@ public class TaskPriority implements Comparable<TaskPriority> {
         if (this.getTaskInstancePriority() < other.getTaskInstancePriority()) {
             return -1;
         }
-        if (this.getTaskGroupPriority() != other.getTaskGroupPriority()) {
-            // larger number, higher priority
-            return Constants.OPPOSITE_VALUE
-                    * Integer.compare(this.getTaskGroupPriority(), other.getTaskGroupPriority());
-        }
+
         if (this.getTaskId() > other.getTaskId()) {
             return 1;
         }
         if (this.getTaskId() < other.getTaskId()) {
             return -1;
         }
-        String thisGroupName =
-                StringUtils.isNotBlank(this.getGroupName()) ? this.getGroupName() : Constants.EMPTY_STRING;
-        String otherGroupName =
-                StringUtils.isNotBlank(other.getGroupName()) ? other.getGroupName() : Constants.EMPTY_STRING;
-        if (!thisGroupName.equals(otherGroupName)) {
-            return thisGroupName.compareTo(otherGroupName);
-        }
-        return Long.compare(this.getCheckpoint(), other.getCheckpoint());
+
+        return this.getGroupName().compareTo(other.getGroupName());
     }
 
     @Override
@@ -215,45 +159,14 @@ public class TaskPriority implements Comparable<TaskPriority> {
         }
         TaskPriority that = (TaskPriority) o;
         return processInstancePriority == that.processInstancePriority
-                && processInstanceId == that.processInstanceId
+                &&  processInstanceId == that.processInstanceId
                 && taskInstancePriority == that.taskInstancePriority
                 && taskId == that.taskId
-                && taskGroupPriority == that.taskGroupPriority
                 && Objects.equals(groupName, that.groupName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(processInstancePriority,
-                processInstanceId,
-                taskInstancePriority,
-                taskId,
-                taskGroupPriority,
-                groupName);
-    }
-
-    @Override
-    public String toString() {
-        return "TaskPriority{"
-                + "processInstancePriority="
-                + processInstancePriority
-                + ", processInstanceId="
-                + processInstanceId
-                + ", taskInstancePriority="
-                + taskInstancePriority
-                + ", taskId="
-                + taskId
-                + ", taskExecutionContext="
-                + taskExecutionContext
-                + ", groupName='"
-                + groupName
-                + '\''
-                + ", context="
-                + context
-                + ", checkpoint="
-                + checkpoint
-                + ", taskGroupPriority="
-                + taskGroupPriority
-                + '}';
+        return Objects.hash(processInstancePriority, processInstanceId, taskInstancePriority, taskId, groupName);
     }
 }

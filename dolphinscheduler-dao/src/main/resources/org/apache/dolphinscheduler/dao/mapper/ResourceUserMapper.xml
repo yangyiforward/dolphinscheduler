@@ -18,20 +18,6 @@
 
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="org.apache.dolphinscheduler.dao.mapper.ResourceUserMapper">
-
-    <select id="queryResourcesIdListByUserIdAndPerm" resultType="java.lang.Integer">
-        select
-        resources_id
-        from t_ds_relation_resources_user rel
-        where 1 = 1
-        <if test="userId != 0 and perm != 0">
-            and rel.user_id=#{userId} and rel.perm=#{perm}
-        </if>
-        <if test="userId != 0 and perm == 0">
-            and rel.user_id=#{userId}
-        </if>
-    </select>
-
     <delete id="deleteResourceUser">
         delete
         from t_ds_relation_resources_user
@@ -51,11 +37,9 @@
         <if test="userId != 0">
             and user_id = #{userId}
         </if>
-        <if test="resIds != null and resIds.length != 0">
-            and resources_id in
-            <foreach collection="resIds" item="i" open="(" close=")" separator=",">
-                #{i}
-            </foreach>
-        </if>
+        and resources_id in
+        <foreach collection="resIds" item="i" open="(" close=")" separator=",">
+            #{i}
+        </foreach>
     </delete>
 </mapper>

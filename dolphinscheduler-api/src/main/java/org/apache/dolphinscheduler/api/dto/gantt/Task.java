@@ -14,18 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.dto.gantt;
 
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
  * Task
  */
 public class Task {
-
     /**
      * task name
      */
@@ -34,11 +32,11 @@ public class Task {
     /**
      * task start date
      */
-    private List<Long> startDate = new LinkedList<>();
+    private List<Long> startDate = new ArrayList<>();
     /**
      * task end date
      */
-    private List<Long> endDate = new LinkedList<>();
+    private List<Long> endDate = new ArrayList<>();
 
     /**
      * task execution date

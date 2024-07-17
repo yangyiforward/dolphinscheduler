@@ -14,93 +14,110 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.service;
 
 import org.apache.dolphinscheduler.api.enums.Status;
-import org.apache.dolphinscheduler.api.service.impl.BaseServiceImpl;
 import org.apache.dolphinscheduler.api.utils.Result;
-import org.apache.dolphinscheduler.common.constants.Constants;
+import org.apache.dolphinscheduler.common.Constants;
 import org.apache.dolphinscheduler.common.enums.UserType;
+import org.apache.dolphinscheduler.common.utils.HadoopUtils;
 import org.apache.dolphinscheduler.dao.entity.User;
-import org.apache.dolphinscheduler.plugin.storage.hdfs.HdfsStorageOperator;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * base service test
- */
-@ExtendWith(MockitoExtension.class)
+@RunWith(PowerMockRunner.class)
+@PowerMockIgnore({"sun.security.*", "javax.net.*"})
+@PrepareForTest({HadoopUtils.class})
 public class BaseServiceTest {
 
     private static final Logger logger = LoggerFactory.getLogger(BaseServiceTest.class);
 
-    private BaseServiceImpl baseService;
+    private BaseService baseService;
 
     @Mock
-    private HdfsStorageOperator hdfsStorageOperator;
+    private HadoopUtils hadoopUtils;
 
-    @BeforeEach
+    @Before
     public void setUp() {
-        baseService = new BaseServiceImpl();
+        baseService = new BaseService();
     }
 
     @Test
-    public void testIsAdmin() {
+    public void testIsAdmin(){
 
         User user = new User();
         user.setUserType(UserType.ADMIN_USER);
-        // ADMIN_USER
-        Assertions.assertTrue(baseService.isAdmin(user));
-        // GENERAL_USER
+        //ADMIN_USER
+         boolean isAdmin = baseService.isAdmin(user);
+        Assert.assertTrue(isAdmin);
+        //GENERAL_USER
         user.setUserType(UserType.GENERAL_USER);
-        Assertions.assertFalse(baseService.isAdmin(user));
+        isAdmin = baseService.isAdmin(user);
+        Assert.assertFalse(isAdmin);
 
     }
 
     @Test
-    public void testPutMsg() {
+    public void testPutMsg(){
 
         Map<String, Object> result = new HashMap<>();
         baseService.putMsg(result, Status.SUCCESS);
-        Assertions.assertEquals(Status.SUCCESS, result.get(Constants.STATUS));
-        // has params
-        baseService.putMsg(result, Status.PROJECT_NOT_FOUND, "test");
+        Assert.assertEquals(Status.SUCCESS,result.get(Constants.STATUS));
+        //has params
+        baseService.putMsg(result, Status.PROJECT_NOT_FOUNT,"test");
 
     }
-
     @Test
-    public void testPutMsgTwo() {
+    public void testPutMsgTwo(){
 
         Result result = new Result();
         baseService.putMsg(result, Status.SUCCESS);
-        Assertions.assertEquals(Status.SUCCESS.getMsg(), result.getMsg());
-        // has params
-        baseService.putMsg(result, Status.PROJECT_NOT_FOUND, "test");
+        Assert.assertEquals(Status.SUCCESS.getMsg(),result.getMsg());
+        //has params
+        baseService.putMsg(result,Status.PROJECT_NOT_FOUNT,"test");
     }
-
     @Test
-    public void testHasPerm() {
+    public void testCreateTenantDirIfNotExists(){
+
+        PowerMockito.mockStatic(HadoopUtils.class);
+        PowerMockito.when(HadoopUtils.getInstance()).thenReturn(hadoopUtils);
+
+        try {
+            baseService.createTenantDirIfNotExists("test");
+        } catch (Exception e) {
+            Assert.assertTrue(false);
+            logger.error("CreateTenantDirIfNotExists error ",e);
+            e.printStackTrace();
+        }
+
+    }
+    @Test
+    public void testHasPerm(){
 
         User user = new User();
         user.setId(1);
-        // create user
-        Assertions.assertTrue(baseService.canOperator(user, 1));
+        //create user
+        boolean hasPerm = baseService.hasPerm(user,1);
+        Assert.assertTrue(hasPerm);
 
-        // admin
+        //admin
         user.setId(2);
         user.setUserType(UserType.ADMIN_USER);
-        Assertions.assertTrue(baseService.canOperator(user, 1));
+        hasPerm = baseService.hasPerm(user,1);
+        Assert.assertTrue(hasPerm);
 
     }
 

@@ -14,24 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.entity;
-
-import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-@Data
+/**
+ * process instance map
+ */
 @TableName("t_ds_relation_process_instance")
 public class ProcessInstanceMap {
 
     /**
      * id
      */
-    @TableId(value = "id", type = IdType.AUTO)
-    private Integer id;
+    @TableId(value="id", type=IdType.AUTO)
+    private int id;
 
     /**
      * parent process instance id
@@ -48,26 +47,58 @@ public class ProcessInstanceMap {
      */
     private int processInstanceId;
 
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getParentProcessInstanceId() {
+        return parentProcessInstanceId;
+    }
+
+    public void setParentProcessInstanceId(int parentProcessInstanceId) {
+        this.parentProcessInstanceId = parentProcessInstanceId;
+    }
+
+    public int getParentTaskInstanceId() {
+        return parentTaskInstanceId;
+    }
+
+    public void setParentTaskInstanceId(int parentTaskInstanceId) {
+        this.parentTaskInstanceId = parentTaskInstanceId;
+    }
+
+    public int getProcessInstanceId() {
+        return processInstanceId;
+    }
+
+    public void setProcessInstanceId(int processInstanceId) {
+        this.processInstanceId = processInstanceId;
+    }
+
+    @Override
+    public String toString() {
+        return "ProcessInstanceMap{" +
+                "id=" + id +
+                ", parentProcessInstanceId=" + parentProcessInstanceId +
+                ", parentTaskInstanceId=" + parentTaskInstanceId +
+                ", processInstanceId=" + processInstanceId +
+                '}';
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
         ProcessInstanceMap that = (ProcessInstanceMap) o;
 
-        if (id != that.id) {
-            return false;
-        }
-        if (parentProcessInstanceId != that.parentProcessInstanceId) {
-            return false;
-        }
-        if (parentTaskInstanceId != that.parentTaskInstanceId) {
-            return false;
-        }
+        if (id != that.id) return false;
+        if (parentProcessInstanceId != that.parentProcessInstanceId) return false;
+        if (parentTaskInstanceId != that.parentTaskInstanceId) return false;
         return processInstanceId == that.processInstanceId;
     }
 

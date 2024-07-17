@@ -14,23 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.common.utils;
 
-import org.apache.dolphinscheduler.common.constants.Constants;
+import org.apache.dolphinscheduler.common.Constants;
+import org.junit.Test;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import static org.junit.Assert.assertNotNull;
 
 public class PropertyUtilsTest {
 
     @Test
     public void getString() {
-        Assertions.assertNotNull(PropertyUtils.getString(Constants.FS_DEFAULT_FS));
-    }
-
-    @Test
-    public void getResUploadStartupState() {
-        Assertions.assertTrue(PropertyUtils.getResUploadStartupState());
+        assertNotNull(PropertyUtils.getString(Constants.FS_DEFAULTFS));
+        assertNotNull(PropertyUtils.getInt("spring.redis.port"));
     }
 }

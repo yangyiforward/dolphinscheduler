@@ -14,50 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.service.queue;
 
-import org.apache.dolphinscheduler.service.exceptions.TaskPriorityQueueException;
 
-import java.util.concurrent.TimeUnit;
-
-/**
- * task priority queue
- * @param <T>
- */
 public interface TaskPriorityQueue<T> {
 
     /**
      * put task info
      *
      * @param taskInfo taskInfo
-     * @throws TaskPriorityQueueException
+     * @throws Exception
      */
-    void put(T taskInfo);
+    void put(T taskInfo) throws Exception;
 
     /**
      * take taskInfo
-     *
      * @return taskInfo
-     * @throws TaskPriorityQueueException
+     * @throws Exception
      */
-    T take() throws TaskPriorityQueueException, InterruptedException;
-
-    /**
-     * poll taskInfo with timeout
-     * @param timeout
-     * @param unit
-     * @return
-     * @throws TaskPriorityQueueException
-     * @throws InterruptedException
-     */
-    T poll(long timeout, TimeUnit unit) throws TaskPriorityQueueException, InterruptedException;
+    T take()throws Exception;
 
     /**
      * size
      *
      * @return size
-     * @throws TaskPriorityQueueException
+     * @throws Exception
      */
-    int size() throws TaskPriorityQueueException;
+    int size() throws Exception;
 }

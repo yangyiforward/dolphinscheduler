@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.dto;
 
 import java.util.Date;
@@ -23,61 +22,50 @@ import java.util.Date;
  * schedule parameters
  */
 public class ScheduleParam {
+  private Date startTime;
+  private Date endTime;
+  private String crontab;
 
-    private Date startTime;
-    private Date endTime;
-    private String crontab;
-    private String timezoneId;
+  public ScheduleParam() {
+  }
 
-    public ScheduleParam() {
-    }
+  public ScheduleParam(Date startTime, Date endTime, String crontab) {
+    this.startTime = startTime;
+    this.endTime = endTime;
+    this.crontab = crontab;
+  }
 
-    public ScheduleParam(Date startTime, Date endTime, String timezoneId, String crontab) {
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.timezoneId = timezoneId;
-        this.crontab = crontab;
-    }
+  public Date getStartTime() {
+    return startTime;
+  }
 
-    public Date getStartTime() {
-        return startTime;
-    }
+  public void setStartTime(Date startTime) {
+    this.startTime = startTime;
+  }
 
-    public void setStartTime(Date startTime) {
-        this.startTime = startTime;
-    }
+  public Date getEndTime() {
+    return endTime;
+  }
 
-    public Date getEndTime() {
-        return endTime;
-    }
+  public void setEndTime(Date endTime) {
+    this.endTime = endTime;
+  }
 
-    public void setEndTime(Date endTime) {
-        this.endTime = endTime;
-    }
+  public String getCrontab() {
+    return crontab;
+  }
 
-    public String getCrontab() {
-        return crontab;
-    }
+  public void setCrontab(String crontab) {
+    this.crontab = crontab;
+  }
 
-    public void setCrontab(String crontab) {
-        this.crontab = crontab;
-    }
 
-    public String getTimezoneId() {
-        return timezoneId;
-    }
-
-    public void setTimezoneId(String timezoneId) {
-        this.timezoneId = timezoneId;
-    }
-
-    @Override
-    public String toString() {
-        return "ScheduleParam{"
-                + "startTime=" + startTime
-                + ", endTime=" + endTime
-                + ", crontab='" + crontab + '\''
-                + ", timezoneId='" + timezoneId + '\''
-                + '}';
-    }
+  @Override
+  public String toString() {
+    return "ScheduleParam{" +
+            "startTime=" + startTime +
+            ", endTime=" + endTime +
+            ", crontab='" + crontab + '\'' +
+            '}';
+  }
 }

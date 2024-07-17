@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -18,45 +18,52 @@
 
 workDir=`dirname $0`
 workDir=`cd ${workDir};pwd`
+source $workDir/../conf/config/install_config.conf
 
-source ${workDir}/env/install_env.sh
+txt=""
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # Mac OSX
+    txt="''"
+fi
+
+declare -A workersGroupMap=()
 
 workersGroup=(${workers//,/ })
 for workerGroup in ${workersGroup[@]}
 do
   echo $workerGroup;
   worker=`echo $workerGroup|awk -F':' '{print $1}'`
-  group=`echo $workerGroup|awk -F':' '{print $2}'`
-  workerNames+=($worker)
-  groupNames+=(${group:-default})
+  groupName=`echo $workerGroup|awk -F':' '{print $2}'`
+  if [ -z ${workersGroupMap[$worker]} ];then
+      workersGroupMap+=([$worker]=$groupName)
+  else
+      finalGroupName="${workersGroupMap[$worker]},$groupName"
+      workersGroupMap[$worker]=$finalGroupName
+  fi
 done
+
 
 hostsArr=(${ips//,/ })
 for host in ${hostsArr[@]}
 do
 
-  if ! ssh -o StrictHostKeyChecking=no -p $sshPort $host test -e $installPath; then
-    ssh -o StrictHostKeyChecking=no -p $sshPort $host "sudo mkdir -p $installPath; sudo chown -R $deployUser:$deployUser $installPath"
+  if ! ssh -p $sshPort $host test -e $installPath; then
+    ssh -p $sshPort $host "sudo mkdir -p $installPath; sudo chown -R $deployUser:$deployUser $installPath"
   fi
 
   echo "scp dirs to $host/$installPath starting"
-  for i in ${!workerNames[@]}; do
-    if [[ ${workerNames[$i]} == $host ]]; then
-      workerIndex=$i
-      break
-    fi
-  done
-  # set worker groups in application.yaml
-  [[ -n ${workerIndex} ]] && sed -i "s/- default/- ${groupNames[$workerIndex]}/" $workDir/../worker-server/conf/application.yaml
+	ssh -p $sshPort $host  "cd $installPath/; rm -rf bin/ conf/ lib/ script/ sql/ ui/"
 
-  for dsDir in bin master-server worker-server alert-server api-server ui tools
+  for dsDir in bin conf ext lib script sql ui install.sh
   do
+    # if worker in workersGroupMap
+    if [[ "${workersGroupMap[${host}]}" ]] && [[ "${dsDir}" == "conf" ]]; then
+      sed -i ${txt} "s@^#\?worker.groups=.*@worker.groups=${workersGroupMap[${host}]}@g" ${dsDir}/worker.properties
+    fi
+
     echo "start to scp $dsDir to $host/$installPath"
-    # Use quiet mode to reduce command line output
-    scp -q -P $sshPort -r $workDir/../$dsDir  $host:$installPath
+    scp -P $sshPort -r $workDir/../$dsDir  $host:$installPath
   done
-  # restore worker groups to default
-  [[ -n ${workerIndex} ]] && sed -i "s/- ${groupNames[$workerIndex]}/- default/" $workDir/../worker-server/conf/application.yaml
 
   echo "scp dirs to $host/$installPath complete"
 done

@@ -14,25 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.service;
 
 import org.apache.dolphinscheduler.api.enums.Status;
-import org.apache.dolphinscheduler.api.exceptions.ServiceException;
 import org.apache.dolphinscheduler.api.utils.Result;
-import org.apache.dolphinscheduler.common.enums.AuthorizationType;
+import org.apache.dolphinscheduler.common.Constants;
+import org.apache.dolphinscheduler.common.enums.UserType;
+import org.apache.dolphinscheduler.common.utils.DateUtils;
+import org.apache.dolphinscheduler.common.utils.HadoopUtils;
+import org.apache.dolphinscheduler.common.utils.StringUtils;
 import org.apache.dolphinscheduler.dao.entity.User;
 
+import java.text.MessageFormat;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-
-import org.slf4j.Logger;
+import java.util.Objects;
 
 /**
  * base service
  */
-public interface BaseService {
+public class BaseService {
 
     /**
      * check admin
@@ -40,25 +42,25 @@ public interface BaseService {
      * @param user input user
      * @return ture if administrator, otherwise return false
      */
-    boolean isAdmin(User user);
+    protected boolean isAdmin(User user) {
+        return user.getUserType() == UserType.ADMIN_USER;
+    }
 
     /**
-     * isNotAdmin
+     * check admin
      *
      * @param loginUser login user
      * @param result result code
-     * @return true if not administrator, otherwise false
+     * @return true if administrator, otherwise false
      */
-    boolean isNotAdmin(User loginUser, Map<String, Object> result);
-
-    /**
-     * permissionPostHandle
-     * @param authorizationType
-     * @param userId
-     * @param ids
-     * @param logger
-     */
-    void permissionPostHandle(AuthorizationType authorizationType, Integer userId, List<Integer> ids, Logger logger);
+    protected boolean checkAdmin(User loginUser, Map<String, Object> result) {
+        //only admin can operate
+        if (!isAdmin(loginUser)) {
+            putMsg(result, Status.USER_NO_OPERATION_PERM);
+            return true;
+        }
+        return false;
+    }
 
     /**
      * put message to map
@@ -67,7 +69,14 @@ public interface BaseService {
      * @param status status
      * @param statusParams status message
      */
-    void putMsg(Map<String, Object> result, Status status, Object... statusParams);
+    protected void putMsg(Map<String, Object> result, Status status, Object... statusParams) {
+        result.put(Constants.STATUS, status);
+        if (statusParams != null && statusParams.length > 0) {
+            result.put(Constants.MSG, MessageFormat.format(status.getMsg(), statusParams));
+        } else {
+            result.put(Constants.MSG, status.getMsg());
+        }
+    }
 
     /**
      * put message to result object
@@ -76,7 +85,16 @@ public interface BaseService {
      * @param status status
      * @param statusParams status message
      */
-    void putMsg(Result<Object> result, Status status, Object... statusParams);
+    protected void putMsg(Result result, Status status, Object... statusParams) {
+        result.setCode(status.getCode());
+
+        if (statusParams != null && statusParams.length > 0) {
+            result.setMsg(MessageFormat.format(status.getMsg(), statusParams));
+        } else {
+            result.setMsg(status.getMsg());
+        }
+
+    }
 
     /**
      * check
@@ -86,38 +104,66 @@ public interface BaseService {
      * @param userNoOperationPerm status
      * @return check result
      */
-    boolean check(Map<String, Object> result, boolean bool, Status userNoOperationPerm);
+    protected boolean check(Map<String, Object> result, boolean bool, Status userNoOperationPerm) {
+        //only admin can operate
+        if (bool) {
+            result.put(Constants.STATUS, userNoOperationPerm);
+            result.put(Constants.MSG, userNoOperationPerm.getMsg());
+            return true;
+        }
+        return false;
+    }
 
     /**
-     * Verify that the operator has permissions
-     *
-     * @param operateUser operate user
-     * @param createUserId create user id
-     * @return check result
+     * create tenant dir if not exists
+     * @param tenantCode tenant code
+     * @throws Exception if hdfs operation exception
      */
-    boolean canOperator(User operateUser, int createUserId);
+    protected void createTenantDirIfNotExists(String tenantCode)throws Exception{
 
-    /**
-     * Verify that the operator has permissions
-     * @param user operate user
-     * @param ids Object[]
-     * @Param type authorizationType
-     * @Param perm String
-     * @return check result
-     */
-    boolean canOperatorPermissions(User user, Object[] ids, AuthorizationType type, String perm);
+        String resourcePath = HadoopUtils.getHdfsResDir(tenantCode);
+        String udfsPath = HadoopUtils.getHdfsUdfDir(tenantCode);
+        /**
+         * init resource path and udf path
+         */
+        HadoopUtils.getInstance().mkdir(resourcePath);
+        HadoopUtils.getInstance().mkdir(udfsPath);
+    }
+
+    protected boolean hasPerm(User operateUser, int createUserId){
+        return operateUser.getId() == createUserId || isAdmin(operateUser);
+    }
 
     /**
      * check and parse date parameters
-     */
-    Date checkAndParseDateParameters(String startDateStr) throws ServiceException;
-
-    /**
-     * check checkDescriptionLength
      *
-     * @param description input String
-     * @return ture if Length acceptable, Length exceeds return false
+     * @param startDateStr start date string
+     * @param endDateStr end date string
+     * @return map<status,startDate,endDate>
      */
-    boolean checkDescriptionLength(String description);
+    Map<String, Object> checkAndParseDateParameters(String startDateStr, String endDateStr){
+        Map<String, Object> result = new HashMap<>();
+        Date start = null;
+        if (StringUtils.isNotEmpty(startDateStr)) {
+            start = DateUtils.getScheduleDate(startDateStr);
+            if (Objects.isNull(start)) {
+                putMsg(result, Status.REQUEST_PARAMS_NOT_VALID_ERROR, Constants.START_END_DATE);
+                return result;
+            }
+        }
+        result.put(Constants.START_TIME, start);
 
+        Date end = null;
+        if (StringUtils.isNotEmpty(endDateStr)) {
+            end = DateUtils.getScheduleDate(endDateStr);
+            if (Objects.isNull(end)) {
+                putMsg(result, Status.REQUEST_PARAMS_NOT_VALID_ERROR, Constants.START_END_DATE);
+                return result;
+            }
+        }
+        result.put(Constants.END_TIME, end);
+
+        putMsg(result, Status.SUCCESS);
+        return result;
+    }
 }

@@ -16,11 +16,11 @@
  */
 package org.apache.dolphinscheduler.dao.entity;
 
-import java.util.Date;
-
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+
+import java.util.Date;
 
 /**
  * session
@@ -31,7 +31,7 @@ public class Session {
     /**
      * id
      */
-    @TableId(value = "id", type = IdType.INPUT)
+    @TableId(value="id", type=IdType.INPUT)
     private String id;
 
     /**
@@ -93,24 +93,14 @@ public class Session {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
         Session session = (Session) o;
 
-        if (userId != session.userId) {
-            return false;
-        }
-        if (!id.equals(session.id)) {
-            return false;
-        }
-        if (!lastLoginTime.equals(session.lastLoginTime)) {
-            return false;
-        }
+        if (userId != session.userId) return false;
+        if (!id.equals(session.id)) return false;
+        if (!lastLoginTime.equals(session.lastLoginTime)) return false;
         return ip.equals(session.ip);
     }
 

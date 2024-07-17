@@ -14,90 +14,72 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.entity;
 
-import static org.apache.dolphinscheduler.common.constants.Constants.SEC_2_MINUTES_TIME_UNIT;
-import static org.apache.dolphinscheduler.plugin.task.api.TaskConstants.TASK_TYPE_BLOCKING;
-import static org.apache.dolphinscheduler.plugin.task.api.TaskConstants.TASK_TYPE_CONDITIONS;
-import static org.apache.dolphinscheduler.plugin.task.api.TaskConstants.TASK_TYPE_DEPENDENT;
-import static org.apache.dolphinscheduler.plugin.task.api.TaskConstants.TASK_TYPE_SUB_PROCESS;
-import static org.apache.dolphinscheduler.plugin.task.api.TaskConstants.TASK_TYPE_SWITCH;
-
-import org.apache.dolphinscheduler.common.constants.Constants;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import org.apache.dolphinscheduler.common.enums.ExecutionStatus;
 import org.apache.dolphinscheduler.common.enums.Flag;
 import org.apache.dolphinscheduler.common.enums.Priority;
-import org.apache.dolphinscheduler.common.enums.TaskExecuteType;
-import org.apache.dolphinscheduler.common.utils.DateUtils;
+import org.apache.dolphinscheduler.common.enums.TaskType;
+import org.apache.dolphinscheduler.common.model.TaskNode;
 import org.apache.dolphinscheduler.common.utils.JSONUtils;
-import org.apache.dolphinscheduler.plugin.task.api.enums.TaskExecutionStatus;
-import org.apache.dolphinscheduler.plugin.task.api.parameters.DependentParameters;
-import org.apache.dolphinscheduler.plugin.task.api.parameters.SwitchParameters;
 
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Map;
 
-import lombok.Data;
-
-import com.baomidou.mybatisplus.annotation.FieldStrategy;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.fasterxml.jackson.core.type.TypeReference;
-
 /**
  * task instance
  */
-@Data
 @TableName("t_ds_task_instance")
 public class TaskInstance implements Serializable {
 
     /**
      * id
      */
-    @TableId(value = "id", type = IdType.AUTO)
-    private Integer id;
+    @TableId(value="id", type=IdType.AUTO)
+    private int id;
 
     /**
      * task name
      */
     private String name;
 
+
+
     /**
      * task type
      */
     private String taskType;
 
+    /**
+     * process definition id
+     */
+    private int processDefinitionId;
+
+    /**
+     * process instance id
+     */
     private int processInstanceId;
-
-    private String processInstanceName;
-
-    private Long projectCode;
-
-    private long taskCode;
-
-    private int taskDefinitionVersion;
-
-    @TableField(exist = false)
-    private String processDefinitionName;
 
     /**
      * process instance name
      */
     @TableField(exist = false)
-    private int taskGroupPriority;
+    private String processInstanceName;
+
+    /**
+     * task json
+     */
+    private String taskJson;
 
     /**
      * state
      */
-    private TaskExecutionStatus state;
-
-    /**
-     * task first submit time.
-     */
-    private Date firstSubmitTime;
+    private ExecutionStatus state;
 
     /**
      * task submit time
@@ -154,12 +136,6 @@ public class TaskInstance implements Serializable {
     private ProcessDefinition processDefine;
 
     /**
-     * task definition
-     */
-    @TableField(exist = false)
-    private TaskDefinition taskDefine;
-
-    /**
      * process id
      */
     private int pid;
@@ -175,27 +151,10 @@ public class TaskInstance implements Serializable {
     private Flag flag;
 
     /**
-     * task is cache: yes/no
-     */
-    private Flag isCache;
-
-    /**
-     * cache_key
-     */
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
-    private String cacheKey;
-
-    /**
      * dependency
      */
     @TableField(exist = false)
-    private DependentParameters dependency;
-
-    /**
-     * switch dependency
-     */
-    @TableField(exist = false)
-    private SwitchParameters switchDependency;
+    private String dependency;
 
     /**
      * duration
@@ -230,20 +189,12 @@ public class TaskInstance implements Serializable {
     @TableField(exist = false)
     private String dependentResult;
 
+
     /**
      * workerGroup
      */
     private String workerGroup;
 
-    /**
-     * environment code
-     */
-    private Long environmentCode;
-
-    /**
-     * environment config
-     */
-    private String environmentConfig;
 
     /**
      * executor id
@@ -251,157 +202,363 @@ public class TaskInstance implements Serializable {
     private int executorId;
 
     /**
-     * varPool string
+     * executor name
      */
-    private String varPool;
-
+    @TableField(exist = false)
     private String executorName;
 
+
     @TableField(exist = false)
-    private Map<String, String> resources;
+    private Map<String,String> resources;
 
-    /**
-     * delay execution time.
-     */
-    private int delayTime;
 
-    /**
-     * task params
-     */
-    private String taskParams;
 
-    /**
-     * dry run flag
-     */
-    private int dryRun;
-    /**
-     * task group id
-     */
-    private int taskGroupId;
-
-    /**
-     * cpu quota
-     */
-    private Integer cpuQuota;
-
-    /**
-     * max memory
-     */
-    private Integer memoryMax;
-
-    /**
-     * task execute type
-     */
-    private TaskExecuteType taskExecuteType;
-
-    /**
-     * test flag
-     */
-    private int testFlag;
-
-    public void init(String host, Date startTime, String executePath) {
+    public void init(String host,Date startTime,String executePath){
         this.host = host;
         this.startTime = startTime;
         this.executePath = executePath;
     }
 
-    public DependentParameters getDependency() {
-        if (this.dependency == null) {
-            Map<String, Object> taskParamsMap =
-                    JSONUtils.parseObject(this.getTaskParams(), new TypeReference<Map<String, Object>>() {
-                    });
-            this.dependency =
-                    JSONUtils.parseObject((String) taskParamsMap.get(Constants.DEPENDENCE), DependentParameters.class);
+
+    public ProcessInstance getProcessInstance() {
+        return processInstance;
+    }
+
+    public void setProcessInstance(ProcessInstance processInstance) {
+        this.processInstance = processInstance;
+    }
+
+    public ProcessDefinition getProcessDefine() {
+        return processDefine;
+    }
+
+    public void setProcessDefine(ProcessDefinition processDefine) {
+        this.processDefine = processDefine;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getTaskType() {
+        return taskType;
+    }
+
+    public void setTaskType(String taskType) {
+        this.taskType = taskType;
+    }
+
+    public int getProcessDefinitionId() {
+        return processDefinitionId;
+    }
+
+    public void setProcessDefinitionId(int processDefinitionId) {
+        this.processDefinitionId = processDefinitionId;
+    }
+
+    public int getProcessInstanceId() {
+        return processInstanceId;
+    }
+
+    public void setProcessInstanceId(int processInstanceId) {
+        this.processInstanceId = processInstanceId;
+    }
+
+    public String getTaskJson() {
+        return taskJson;
+    }
+
+    public void setTaskJson(String taskJson) {
+        this.taskJson = taskJson;
+    }
+
+    public ExecutionStatus getState() {
+        return state;
+    }
+
+    public void setState(ExecutionStatus state) {
+        this.state = state;
+    }
+
+    public Date getSubmitTime() {
+        return submitTime;
+    }
+
+    public void setSubmitTime(Date submitTime) {
+        this.submitTime = submitTime;
+    }
+
+    public Date getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(Date startTime) {
+        this.startTime = startTime;
+    }
+
+    public Date getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(Date endTime) {
+        this.endTime = endTime;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public String getExecutePath() {
+        return executePath;
+    }
+
+    public void setExecutePath(String executePath) {
+        this.executePath = executePath;
+    }
+
+    public String getLogPath() {
+        return logPath;
+    }
+
+    public void setLogPath(String logPath) {
+        this.logPath = logPath;
+    }
+
+    public Flag getAlertFlag() {
+        return alertFlag;
+    }
+
+    public void setAlertFlag(Flag alertFlag) {
+        this.alertFlag = alertFlag;
+    }
+
+    public int getRetryTimes() {
+        return retryTimes;
+    }
+
+    public void setRetryTimes(int retryTimes) {
+        this.retryTimes = retryTimes;
+    }
+
+    public Boolean isTaskSuccess(){
+        return this.state == ExecutionStatus.SUCCESS;
+    }
+
+    public int getPid() {
+        return pid;
+    }
+
+    public void setPid(int pid) {
+        this.pid = pid;
+    }
+
+    public String getAppLink() {
+        return appLink;
+    }
+
+    public void setAppLink(String appLink) {
+        this.appLink = appLink;
+    }
+
+
+
+    public String getDependency(){
+
+        if(this.dependency != null){
+            return this.dependency;
         }
-        return this.dependency;
+        TaskNode taskNode = JSONUtils.parseObject(taskJson, TaskNode.class);
+
+        return taskNode.getDependence();
     }
 
-    public void setDependency(DependentParameters dependency) {
-        this.dependency = dependency;
+    public Flag getFlag() {
+        return flag;
     }
 
-    public SwitchParameters getSwitchDependency() {
-        if (this.switchDependency == null) {
-            Map<String, Object> taskParamsMap =
-                    JSONUtils.parseObject(this.getTaskParams(), new TypeReference<Map<String, Object>>() {
-                    });
-            this.switchDependency =
-                    JSONUtils.parseObject((String) taskParamsMap.get(Constants.SWITCH_RESULT), SwitchParameters.class);
-        }
-        return this.switchDependency;
+    public void setFlag(Flag flag) {
+        this.flag = flag;
+    }
+    public String getProcessInstanceName() {
+        return processInstanceName;
     }
 
-    public void setSwitchDependency(SwitchParameters switchDependency) {
-        Map<String, Object> taskParamsMap =
-                JSONUtils.parseObject(this.getTaskParams(), new TypeReference<Map<String, Object>>() {
-                });
-        taskParamsMap.put(Constants.SWITCH_RESULT, JSONUtils.toJsonString(switchDependency));
-        this.setTaskParams(JSONUtils.toJsonString(taskParamsMap));
+    public void setProcessInstanceName(String processInstanceName) {
+        this.processInstanceName = processInstanceName;
+    }
+
+    public String getDuration() {
+        return duration;
+    }
+
+    public void setDuration(String duration) {
+        this.duration = duration;
+    }
+
+    public int getMaxRetryTimes() {
+        return maxRetryTimes;
+    }
+
+    public void setMaxRetryTimes(int maxRetryTimes) {
+        this.maxRetryTimes = maxRetryTimes;
+    }
+
+    public int getRetryInterval() {
+        return retryInterval;
+    }
+
+    public void setRetryInterval(int retryInterval) {
+        this.retryInterval = retryInterval;
+    }
+
+    public int getExecutorId() {
+        return executorId;
+    }
+
+    public void setExecutorId(int executorId) {
+        this.executorId = executorId;
+    }
+
+    public String getExecutorName() {
+        return executorName;
+    }
+
+    public void setExecutorName(String executorName) {
+        this.executorName = executorName;
     }
 
     public boolean isTaskComplete() {
 
-        return this.getState().isSuccess()
-                || this.getState().isKill()
-                || (this.getState().isFailure() && !taskCanRetry());
+        return this.getState().typeIsPause()
+                || this.getState().typeIsSuccess()
+                || this.getState().typeIsCancel()
+                || (this.getState().typeIsFailure() && !taskCanRetry());
     }
 
-    public boolean isSubProcess() {
-        return TASK_TYPE_SUB_PROCESS.equalsIgnoreCase(this.taskType);
+    public Map<String, String> getResources() {
+        return resources;
     }
 
-    public boolean isDependTask() {
-        return TASK_TYPE_DEPENDENT.equalsIgnoreCase(this.taskType);
+    public void setResources(Map<String, String> resources) {
+        this.resources = resources;
     }
 
-    public boolean isConditionsTask() {
-        return TASK_TYPE_CONDITIONS.equalsIgnoreCase(this.taskType);
+    public boolean isSubProcess(){
+        return TaskType.SUB_PROCESS.equals(TaskType.valueOf(this.taskType));
     }
 
-    public boolean isSwitchTask() {
-        return TASK_TYPE_SWITCH.equalsIgnoreCase(this.taskType);
+    public boolean isDependTask(){
+        return TaskType.DEPENDENT.equals(TaskType.valueOf(this.taskType));
     }
 
-    public boolean isBlockingTask() {
-        return TASK_TYPE_BLOCKING.equalsIgnoreCase(this.taskType);
+    public boolean isConditionsTask(){
+        return TaskType.CONDITIONS.equals(TaskType.valueOf(this.taskType));
     }
 
-    public boolean isFirstRun() {
-        return endTime == null;
-    }
+
 
     /**
-     * determine if a task instance can retry
-     * if subProcess,
-     *
+     * determine if you can try again
      * @return can try result
      */
     public boolean taskCanRetry() {
-        if (this.isSubProcess()) {
+        if(this.isSubProcess()){
             return false;
         }
-        if (this.getState() == TaskExecutionStatus.NEED_FAULT_TOLERANCE) {
+        if(this.getState() == ExecutionStatus.NEED_FAULT_TOLERANCE){
             return true;
+        }else {
+            return (this.getState().typeIsFailure()
+                && this.getRetryTimes() < this.getMaxRetryTimes());
         }
-        return this.getState() == TaskExecutionStatus.FAILURE && (this.getRetryTimes() < this.getMaxRetryTimes());
     }
 
-    /**
-     * whether the retry interval is timed out
-     *
-     * @return Boolean
-     */
-    public boolean retryTaskIntervalOverTime() {
-        if (getState() != TaskExecutionStatus.FAILURE) {
-            return true;
-        }
-        if (getMaxRetryTimes() == 0 || getRetryInterval() == 0) {
-            return true;
-        }
-        Date now = new Date();
-        long failedTimeInterval = DateUtils.differSec(now, getEndTime());
-        // task retry does not over time, return false
-        return getRetryInterval() * SEC_2_MINUTES_TIME_UNIT < failedTimeInterval;
+    public void setDependency(String dependency) {
+        this.dependency = dependency;
     }
 
+    public Priority getTaskInstancePriority() {
+        return taskInstancePriority;
+    }
+
+    public void setTaskInstancePriority(Priority taskInstancePriority) {
+        this.taskInstancePriority = taskInstancePriority;
+    }
+
+    public Priority getProcessInstancePriority() {
+        return processInstancePriority;
+    }
+
+    public void setProcessInstancePriority(Priority processInstancePriority) {
+        this.processInstancePriority = processInstancePriority;
+    }
+
+    public String getWorkerGroup() {
+        return workerGroup;
+    }
+
+    public void setWorkerGroup(String workerGroup) {
+        this.workerGroup = workerGroup;
+    }
+
+    public String getDependentResult() {
+        return dependentResult;
+    }
+
+    public void setDependentResult(String dependentResult) {
+        this.dependentResult = dependentResult;
+    }
+
+    @Override
+    public String toString() {
+        return "TaskInstance{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", taskType='" + taskType + '\'' +
+                ", processDefinitionId=" + processDefinitionId +
+                ", processInstanceId=" + processInstanceId +
+                ", processInstanceName='" + processInstanceName + '\'' +
+                ", taskJson='" + taskJson + '\'' +
+                ", state=" + state +
+                ", submitTime=" + submitTime +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
+                ", host='" + host + '\'' +
+                ", executePath='" + executePath + '\'' +
+                ", logPath='" + logPath + '\'' +
+                ", retryTimes=" + retryTimes +
+                ", alertFlag=" + alertFlag +
+                ", processInstance=" + processInstance +
+                ", processDefine=" + processDefine +
+                ", pid=" + pid +
+                ", appLink='" + appLink + '\'' +
+                ", flag=" + flag +
+                ", dependency='" + dependency + '\'' +
+                ", duration=" + duration +
+                ", maxRetryTimes=" + maxRetryTimes +
+                ", retryInterval=" + retryInterval +
+                ", taskInstancePriority=" + taskInstancePriority +
+                ", processInstancePriority=" + processInstancePriority +
+                ", dependentResult='" + dependentResult + '\'' +
+                ", workerGroup='" + workerGroup + '\'' +
+                ", executorId=" + executorId +
+                ", executorName='" + executorName + '\'' +
+                '}';
+    }
 }

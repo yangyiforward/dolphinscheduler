@@ -14,11 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.common.enums;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 
@@ -40,8 +36,6 @@ public enum CommandType {
      * 8 pause a process
      * 9 stop a process
      * 10 recover waiting thread
-     * 11 recover serial wait
-     * 12 start a task node in a process instance
      */
     START_PROCESS(0, "start a new process"),
     START_CURRENT_TASK_PROCESS(1, "start a new process from current nodes"),
@@ -53,12 +47,9 @@ public enum CommandType {
     REPEAT_RUNNING(7, "repeat running a process"),
     PAUSE(8, "pause a process"),
     STOP(9, "stop a process"),
-    RECOVER_WAITING_THREAD(10, "recover waiting thread"),
-    RECOVER_SERIAL_WAIT(11, "recover serial wait"),
-    EXECUTE_TASK(12, "start a task node in a process instance"),
-    ;
+    RECOVER_WAITTING_THREAD(10, "recover waiting thread");
 
-    CommandType(int code, String descp) {
+    CommandType(int code, String descp){
         this.code = code;
         this.descp = descp;
     }
@@ -75,17 +66,11 @@ public enum CommandType {
         return descp;
     }
 
-    private static final Map<Integer, CommandType> COMMAND_TYPE_MAP = new HashMap<>();
-
-    static {
-        for (CommandType commandType : CommandType.values()) {
-            COMMAND_TYPE_MAP.put(commandType.code, commandType);
-        }
-    }
-
-    public static CommandType of(Integer status) {
-        if (COMMAND_TYPE_MAP.containsKey(status)) {
-            return COMMAND_TYPE_MAP.get(status);
+    public static CommandType of(Integer status){
+        for(CommandType cmdType : values()){
+            if(cmdType.getCode() == status){
+                return cmdType;
+            }
         }
         throw new IllegalArgumentException("invalid status : " + status);
     }

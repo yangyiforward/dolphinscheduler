@@ -16,9 +16,8 @@
  */
 package org.apache.dolphinscheduler.remote.processor;
 
-import org.apache.dolphinscheduler.remote.command.Command;
-
 import io.netty.channel.Channel;
+import org.apache.dolphinscheduler.remote.command.Command;
 
 /**
  *  netty request processor

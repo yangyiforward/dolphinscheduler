@@ -14,29 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.service.queue;
 
-import org.apache.dolphinscheduler.common.constants.Constants;
-import org.apache.dolphinscheduler.dao.entity.TaskInstance;
-import org.apache.dolphinscheduler.service.exceptions.TaskPriorityQueueException;
 
-import java.util.Collections;
+import org.apache.dolphinscheduler.dao.entity.TaskInstance;
+
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.PriorityQueue;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.base.Preconditions;
 
 /**
  * Task instances priority queue implementation
  * All the task instances are in the same process instance.
  */
 public class PeerTaskInstancePriorityQueue implements TaskPriorityQueue<TaskInstance> {
-
     /**
      * queue size
      */
@@ -45,60 +36,35 @@ public class PeerTaskInstancePriorityQueue implements TaskPriorityQueue<TaskInst
     /**
      * queue
      */
-    private final PriorityQueue<TaskInstance> queue = new PriorityQueue<>(QUEUE_MAX_SIZE, new TaskInfoComparator());
-    private final Set<String> taskInstanceIdentifySet = Collections.synchronizedSet(new HashSet<>());
+    private PriorityQueue<TaskInstance> queue = new PriorityQueue<>(QUEUE_MAX_SIZE, new TaskInfoComparator());
 
     /**
      * put task instance to priority queue
      *
      * @param taskInstance taskInstance
+     * @throws Exception
      */
-    @Override
-    public void put(TaskInstance taskInstance) {
-        Preconditions.checkNotNull(taskInstance);
+    public void put(TaskInstance taskInstance) throws Exception {
         queue.add(taskInstance);
-        taskInstanceIdentifySet.add(getTaskInstanceIdentify(taskInstance));
     }
 
     /**
      * take task info
-     *
      * @return task instance
-     * @throws TaskPriorityQueueException
+     * @throws Exception
      */
     @Override
-    public TaskInstance take() throws TaskPriorityQueueException {
-        TaskInstance taskInstance = queue.poll();
-        if (taskInstance != null) {
-            taskInstanceIdentifySet.remove(getTaskInstanceIdentify(taskInstance));
-        }
-        return taskInstance;
-    }
-
-    /**
-     * poll task info with timeout
-     * <p>
-     * WARN: Please use PriorityBlockingQueue if you want to use poll(timeout, unit)
-     * because this method of override interface used without considering accuracy of timeout
-     *
-     * @param timeout
-     * @param unit
-     * @return
-     * @throws TaskPriorityQueueException
-     * @throws InterruptedException
-     */
-    @Override
-    public TaskInstance poll(long timeout, TimeUnit unit) throws TaskPriorityQueueException {
-        throw new TaskPriorityQueueException(
-                "This operation is not currently supported and suggest to use PriorityBlockingQueue if you want！");
+    public TaskInstance take() throws Exception {
+        return queue.poll();
     }
 
     /**
      * peek taskInfo
      *
      * @return task instance
+     * @throws Exception
      */
-    public TaskInstance peek() {
+    public TaskInstance peek() throws Exception {
         return queue.peek();
     }
 
@@ -107,65 +73,41 @@ public class PeerTaskInstancePriorityQueue implements TaskPriorityQueue<TaskInst
      *
      * @return size
      */
-    @Override
     public int size() {
         return queue.size();
     }
 
     /**
-     * clear task
-     *
-     */
-    public void clear() {
-        queue.clear();
-        taskInstanceIdentifySet.clear();
-    }
-
-    /**
      * whether contains the task instance
-     *
      * @param taskInstance task instance
      * @return true is contains
      */
     public boolean contains(TaskInstance taskInstance) {
-        Preconditions.checkNotNull(taskInstance);
-        return taskInstanceIdentifySet.contains(getTaskInstanceIdentify(taskInstance));
+        return queue.contains(taskInstance);
     }
 
     /**
      * remove task
-     *
      * @param taskInstance task instance
      * @return true if remove success
+     * @throws Exception
      */
-    public boolean remove(TaskInstance taskInstance) {
-        Preconditions.checkNotNull(taskInstance);
-        taskInstanceIdentifySet.remove(getTaskInstanceIdentify(taskInstance));
+    public boolean remove(TaskInstance taskInstance) throws Exception {
         return queue.remove(taskInstance);
     }
 
     /**
      * get iterator
-     *
      * @return Iterator
      */
-    public Iterator<TaskInstance> iterator() {
+    public Iterator iterator(){
         return queue.iterator();
-    }
-
-    // since the task instance will not contain taskInstanceId until insert into database
-    // So we use processInstanceId + taskCode + version to identify a taskInstance.
-    private String getTaskInstanceIdentify(TaskInstance taskInstance) {
-        return String.join(
-                String.valueOf(taskInstance.getProcessInstanceId()),
-                String.valueOf(taskInstance.getTaskCode()),
-                String.valueOf(taskInstance.getTaskDefinitionVersion()), "-");
     }
 
     /**
      * TaskInfoComparator
      */
-    private static class TaskInfoComparator implements Comparator<TaskInstance> {
+    private class TaskInfoComparator implements Comparator<TaskInstance> {
 
         /**
          * compare o1 o2
@@ -176,10 +118,6 @@ public class PeerTaskInstancePriorityQueue implements TaskPriorityQueue<TaskInst
          */
         @Override
         public int compare(TaskInstance o1, TaskInstance o2) {
-            if (o1.getTaskInstancePriority().equals(o2.getTaskInstancePriority())) {
-                // larger number, higher priority
-                return Constants.OPPOSITE_VALUE * Integer.compare(o1.getTaskGroupPriority(), o2.getTaskGroupPriority());
-            }
             return o1.getTaskInstancePriority().compareTo(o2.getTaskInstancePriority());
         }
     }

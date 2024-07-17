@@ -14,161 +14,205 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.api.controller;
 
 import org.apache.dolphinscheduler.api.enums.Status;
-import org.apache.dolphinscheduler.api.service.impl.ProjectServiceImpl;
-import org.apache.dolphinscheduler.api.utils.PageInfo;
 import org.apache.dolphinscheduler.api.utils.Result;
-import org.apache.dolphinscheduler.common.enums.UserType;
-import org.apache.dolphinscheduler.dao.entity.Project;
-import org.apache.dolphinscheduler.dao.entity.Resource;
-import org.apache.dolphinscheduler.dao.entity.User;
-import org.apache.dolphinscheduler.dao.mapper.ProjectMapper;
+import org.apache.dolphinscheduler.common.utils.JSONUtils;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
-import java.text.MessageFormat;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * project controller test
+ * project controller
  */
-@ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
-public class ProjectControllerTest {
+public class ProjectControllerTest extends AbstractControllerTest{
+    private static Logger logger = LoggerFactory.getLogger(ProjectControllerTest.class);
 
-    protected User user;
 
-    @InjectMocks
-    private ProjectController projectController;
+    @Test
+    public void testCreateProject() throws Exception {
 
-    @Mock
-    private ProjectServiceImpl projectService;
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("projectName","project_test1");
+        paramsMap.add("desc","the test project");
 
-    @Mock
-    private ProjectMapper projectMapper;
+        MvcResult mvcResult = mockMvc.perform(post("/projects/create")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andReturn();
 
-    @BeforeEach
-    public void before() {
-        User loginUser = new User();
-        loginUser.setId(1);
-        loginUser.setUserType(UserType.GENERAL_USER);
-        loginUser.setUserName("admin");
-        user = loginUser;
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
     }
 
     @Test
-    public void testUpdateProject() {
-        Result result = new Result();
-        putMsg(result, Status.SUCCESS);
+    public void testUpdateProject() throws Exception {
 
-        long projectCode = 1L;
-        String projectName = "test";
-        String desc = "";
-        String userName = "jack";
-        Mockito.when(projectService.update(user, projectCode, projectName, desc, userName)).thenReturn(result);
-        Result response = projectController.updateProject(user, projectCode, projectName, desc, userName);
-        Assertions.assertEquals(Status.SUCCESS.getCode(), response.getCode().intValue());
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("projectId","18");
+        paramsMap.add("projectName","project_test_update");
+        paramsMap.add("desc","the test project update");
+
+        MvcResult mvcResult = mockMvc.perform(post("/projects/update")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andReturn();
+
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
+    }
+
+
+
+    @Test
+    public void testQueryProjectById() throws Exception {
+
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("projectId","18");
+
+        MvcResult mvcResult = mockMvc.perform(get("/projects/query-by-id")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andReturn();
+
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
     }
 
     @Test
-    public void testQueryProjectByCode() {
-        Result result = new Result();
-        putMsg(result, Status.SUCCESS);
-        long projectCode = 1L;
-        Mockito.when(projectMapper.queryByCode(projectCode)).thenReturn(getProject());
-        Mockito.when(projectService.queryByCode(user, projectCode)).thenReturn(result);
-        Result response = projectController.queryProjectByCode(user, projectCode);
-        Assertions.assertEquals(Status.SUCCESS.getCode(), response.getCode().intValue());
+    public void testQueryProjectListPaging() throws Exception {
+
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("searchVal","test");
+        paramsMap.add("pageSize","2");
+        paramsMap.add("pageNo","2");
+
+
+        MvcResult mvcResult = mockMvc.perform(get("/projects/list-paging")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andReturn();
+
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
     }
+
 
     @Test
-    public void testQueryProjectListPaging() {
-        int pageNo = 1;
-        int pageSize = 10;
-        String searchVal = "";
+    public void testQueryUnauthorizedProject() throws Exception {
 
-        Result result = Result.success(new PageInfo<Resource>(1, 10));
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("userId","2");
 
-        Mockito.when(projectService.queryProjectListPaging(user, pageSize, pageNo, searchVal)).thenReturn(result);
-        Result response = projectController.queryProjectListPaging(user, searchVal, pageSize, pageNo);
+        MvcResult mvcResult = mockMvc.perform(get("/projects/unauth-project")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andReturn();
 
-        Assertions.assertTrue(response != null && response.isSuccess());
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
     }
+
+
 
     @Test
-    public void testQueryUnauthorizedProject() {
-        Result result = new Result();
-        putMsg(result, Status.SUCCESS);
-        Mockito.when(projectService.queryUnauthorizedProject(user, 2)).thenReturn(result);
-        Result response = projectController.queryUnauthorizedProject(user, 2);
-        Assertions.assertEquals(Status.SUCCESS.getCode(), response.getCode().intValue());
+    public void testQueryAuthorizedProject() throws Exception {
+
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("userId","2");
+
+        MvcResult mvcResult = mockMvc.perform(get("/projects/authed-project")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andReturn();
+
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
     }
+
 
     @Test
-    public void testQueryAuthorizedProject() {
-        Result result = new Result();
-        putMsg(result, Status.SUCCESS);
-        Mockito.when(projectService.queryAuthorizedProject(user, 2)).thenReturn(result);
-        Result response = projectController.queryAuthorizedProject(user, 2);
-        Assertions.assertEquals(Status.SUCCESS.getCode(), response.getCode().intValue());
+    public void testQueryAllProjectList() throws Exception {
+
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+
+        MvcResult mvcResult = mockMvc.perform(get("/projects/query-project-list")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andReturn();
+
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
     }
+
+    @Ignore
+    @Test
+    public void testImportProcessDefinition() throws Exception {
+
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("file","test");
+
+        MvcResult mvcResult = mockMvc.perform(post("/projects/import-definition")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.TEXT_PLAIN))
+                .andReturn();
+
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.IMPORT_PROCESS_DEFINE_ERROR.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
+    }
+
 
     @Test
-    public void testQueryAuthorizedUser() {
-        Result result = new Result();
-        this.putMsg(result, Status.SUCCESS);
+    public void testDeleteProject() throws Exception {
 
-        Mockito.when(this.projectService.queryAuthorizedUser(this.user, 3682329499136L)).thenReturn(result);
-        Result response = this.projectController.queryAuthorizedUser(this.user, 3682329499136L);
-        Assertions.assertEquals(Status.SUCCESS.getCode(), response.getCode().intValue());
-    }
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("projectId","18");
 
-    @Test
-    public void testQueryAllProjectList() {
-        User user = new User();
-        user.setId(0);
-        Result result = new Result();
-        putMsg(result, Status.SUCCESS);
-        Mockito.when(projectService.queryAllProjectList(user)).thenReturn(result);
-        Result response = projectController.queryAllProjectList(user);
-        Assertions.assertEquals(Status.SUCCESS.getCode(), response.getCode().intValue());
-    }
-    @Test
-    public void testQueryAllProjectListForDependent() {
-        User user = new User();
-        user.setId(0);
-        Result result = new Result();
-        putMsg(result, Status.SUCCESS);
-        Mockito.when(projectService.queryAllProjectListForDependent()).thenReturn(result);
-        Result response = projectController.queryAllProjectListForDependent(user);
-        Assertions.assertEquals(Status.SUCCESS.getCode(), response.getCode().intValue());
-    }
-    private Project getProject() {
-        Project project = new Project();
-        project.setCode(1L);
-        project.setId(1);
-        project.setName("test");
-        project.setUserId(1);
-        return project;
-    }
+        MvcResult mvcResult = mockMvc.perform(get("/projects/delete")
+                .header(SESSION_ID, sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andReturn();
 
-    private void putMsg(Result result, Status status, Object... statusParams) {
-        result.setCode(status.getCode());
-        if (statusParams != null && statusParams.length > 0) {
-            result.setMsg(MessageFormat.format(status.getMsg(), statusParams));
-        } else {
-            result.setMsg(status.getMsg());
-        }
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        Assert.assertEquals(Status.SUCCESS.getCode(),result.getCode().intValue());
+        logger.info(mvcResult.getResponse().getContentAsString());
     }
 }

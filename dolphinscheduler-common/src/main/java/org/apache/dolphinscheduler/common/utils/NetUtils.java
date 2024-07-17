@@ -19,10 +19,7 @@ package org.apache.dolphinscheduler.common.utils;
 
 import static java.util.Collections.emptyList;
 
-import org.apache.dolphinscheduler.common.constants.Constants;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.http.conn.util.InetAddressUtils;
+import org.apache.dolphinscheduler.common.Constants;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -35,18 +32,21 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * NetUtils
  */
-@Slf4j
 public class NetUtils {
 
+    private static final Pattern IP_PATTERN = Pattern.compile("\\d{1,3}(\\.\\d{1,3}){3,5}$");
     private static final String NETWORK_PRIORITY_DEFAULT = "default";
     private static final String NETWORK_PRIORITY_INNER = "inner";
     private static final String NETWORK_PRIORITY_OUTER = "outer";
+    private static final Logger logger = LoggerFactory.getLogger(NetUtils.class);
     private static InetAddress LOCAL_ADDRESS = null;
     private static volatile String HOST_ADDRESS;
 
@@ -76,7 +76,7 @@ public class NetUtils {
      */
     public static String getHost(InetAddress inetAddress) {
         if (inetAddress != null) {
-            if (KubernetesUtils.isKubernetesMode()) {
+            if (Constants.KUBERNETES_MODE) {
                 String canonicalHost = inetAddress.getCanonicalHostName();
                 String[] items = canonicalHost.split("\\.");
                 if (items.length == 6 && "svc".equals(items[3])) {
@@ -99,7 +99,7 @@ public class NetUtils {
             HOST_ADDRESS = getHost(address);
             return HOST_ADDRESS;
         }
-        return KubernetesUtils.isKubernetesMode() ? "localhost" : "127.0.0.1";
+        return Constants.KUBERNETES_MODE ? "localhost" : "127.0.0.1";
     }
 
     private static InetAddress getLocalAddress() {
@@ -133,7 +133,7 @@ public class NetUtils {
                                 return LOCAL_ADDRESS;
                             }
                         } catch (IOException e) {
-                            log.warn("test address id reachable io exception", e);
+                            logger.warn("test address id reachable io exception", e);
                         }
                     }
                 }
@@ -141,7 +141,7 @@ public class NetUtils {
 
             localAddress = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
-            log.warn("InetAddress get LocalHost exception", e);
+            logger.warn("InetAddress get LocalHost exception", e);
         }
         Optional<InetAddress> addressOp = toValidAddress(localAddress);
         if (addressOp.isPresent()) {
@@ -170,7 +170,7 @@ public class NetUtils {
             try {
                 return InetAddress.getByName(addr.substring(0, i) + '%' + address.getScopeId());
             } catch (UnknownHostException e) {
-                log.debug("Unknown IPV6 address: ", e);
+                logger.debug("Unknown IPV6 address: ", e);
             }
         }
         return address;
@@ -183,7 +183,7 @@ public class NetUtils {
         }
         String name = address.getHostAddress();
         return (name != null
-                && InetAddressUtils.isIPv4Address(name)
+                && IP_PATTERN.matcher(name).matches()
                 && !address.isAnyLocalAddress()
                 && !address.isLoopbackAddress());
     }
@@ -209,7 +209,7 @@ public class NetUtils {
         try {
             validNetworkInterfaces = getValidNetworkInterfaces();
         } catch (SocketException e) {
-            log.warn("ValidNetworkInterfaces exception", e);
+            logger.warn("ValidNetworkInterfaces exception", e);
         }
 
         NetworkInterface result = null;
@@ -237,8 +237,7 @@ public class NetUtils {
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
         while (interfaces.hasMoreElements()) {
             NetworkInterface networkInterface = interfaces.nextElement();
-            // ignore
-            if (ignoreNetworkInterface(networkInterface)) {
+            if (ignoreNetworkInterface(networkInterface)) { // ignore
                 continue;
             }
             validNetworkInterfaces.add(networkInterface);
@@ -259,18 +258,16 @@ public class NetUtils {
     }
 
     private static boolean isSpecifyNetworkInterface(NetworkInterface networkInterface) {
-        String preferredNetworkInterface =
-                PropertyUtils.getString(Constants.DOLPHIN_SCHEDULER_NETWORK_INTERFACE_PREFERRED,
-                        System.getProperty(Constants.DOLPHIN_SCHEDULER_NETWORK_INTERFACE_PREFERRED));
+        String preferredNetworkInterface = PropertyUtils.getString(Constants.DOLPHIN_SCHEDULER_NETWORK_INTERFACE_PREFERRED,
+                System.getProperty(Constants.DOLPHIN_SCHEDULER_NETWORK_INTERFACE_PREFERRED));
         return Objects.equals(networkInterface.getDisplayName(), preferredNetworkInterface);
     }
 
     private static NetworkInterface findAddress(List<NetworkInterface> validNetworkInterfaces) {
-        if (CollectionUtils.isEmpty(validNetworkInterfaces)) {
+        if (validNetworkInterfaces.isEmpty()) {
             return null;
         }
-        String networkPriority = PropertyUtils.getString(Constants.DOLPHIN_SCHEDULER_NETWORK_PRIORITY_STRATEGY,
-                NETWORK_PRIORITY_DEFAULT);
+        String networkPriority = PropertyUtils.getString(Constants.DOLPHIN_SCHEDULER_NETWORK_PRIORITY_STRATEGY, NETWORK_PRIORITY_DEFAULT);
         if (NETWORK_PRIORITY_DEFAULT.equalsIgnoreCase(networkPriority)) {
             return findAddressByDefaultPolicy(validNetworkInterfaces);
         } else if (NETWORK_PRIORITY_INNER.equalsIgnoreCase(networkPriority)) {
@@ -278,7 +275,7 @@ public class NetUtils {
         } else if (NETWORK_PRIORITY_OUTER.equalsIgnoreCase(networkPriority)) {
             return findOuterAddress(validNetworkInterfaces);
         } else {
-            log.error("There is no matching network card acquisition policy!");
+            logger.error("There is no matching network card acquisition policy!");
             return null;
         }
     }

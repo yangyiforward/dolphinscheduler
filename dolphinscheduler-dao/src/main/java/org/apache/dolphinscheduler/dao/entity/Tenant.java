@@ -16,30 +16,35 @@
  */
 package org.apache.dolphinscheduler.dao.entity;
 
-import java.util.Date;
-import java.util.Objects;
-
-import lombok.Data;
-
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-@Data
+import java.util.Date;
+import java.util.Objects;
+
+/**
+ * tenant
+ */
 @TableName("t_ds_tenant")
 public class Tenant {
 
     /**
      * id
      */
-    @TableId(value = "id", type = IdType.AUTO)
-    private Integer id;
+    @TableId(value="id", type=IdType.AUTO)
+    private int id;
 
     /**
      * tenant code
      */
     private String tenantCode;
+
+    /**
+     * tenant name
+     */
+    private String tenantName;
 
     /**
      * description
@@ -72,36 +77,97 @@ public class Tenant {
      */
     private Date updateTime;
 
-    public Tenant() {
+
+    public int getId() {
+        return id;
     }
 
-    public Tenant(String tenantCode, String description, int queueId) {
-        Date now = new Date();
-        this.tenantCode = tenantCode;
-        this.description = description;
-        this.queueId = queueId;
-        this.createTime = now;
-        this.updateTime = now;
-    }
-
-    public Tenant(int id, String tenantCode, String description, int queueId) {
-        Date now = new Date();
+    public void setId(int id) {
         this.id = id;
+    }
+
+    public String getTenantCode() {
+        return tenantCode;
+    }
+
+    public void setTenantCode(String tenantCode) {
         this.tenantCode = tenantCode;
-        this.description = description;
+    }
+
+    public String getTenantName() {
+        return tenantName;
+    }
+
+    public void setTenantName(String tenantName) {
+        this.tenantName = tenantName;
+    }
+
+    public int getQueueId() {
+        return queueId;
+    }
+
+    public void setQueueId(int queueId) {
         this.queueId = queueId;
-        this.createTime = now;
-        this.updateTime = now;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
+
+    public Date getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(Date updateTime) {
+        this.updateTime = updateTime;
+    }
+
+    public String getQueueName() {
+        return queueName;
+    }
+
+    public void setQueueName(String queueName) {
+        this.queueName = queueName;
+    }
+
+    public String getQueue() {
+        return queue;
+    }
+
+    public void setQueue(String queue) {
+        this.queue = queue;
+    }
+
+    @Override
+    public String toString() {
+        return "Tenant{" +
+                "id=" + id +
+                ", tenantCode='" + tenantCode + '\'' +
+                ", tenantName='" + tenantName + '\'' +
+                ", queueId=" + queueId +
+                ", queueName='" + queueName + '\'' +
+                ", queue='" + queue + '\'' +
+                ", createTime=" + createTime +
+                ", updateTime=" + updateTime +
+                '}';
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
         Tenant tenant = (Tenant) o;
 

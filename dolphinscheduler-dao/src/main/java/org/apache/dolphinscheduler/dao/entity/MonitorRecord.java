@@ -14,11 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.entity;
 
+import org.apache.dolphinscheduler.common.enums.DbType;
 import org.apache.dolphinscheduler.common.enums.Flag;
-import org.apache.dolphinscheduler.spi.enums.DbType;
 
 import java.util.Date;
 
@@ -109,15 +108,15 @@ public class MonitorRecord {
 
     @Override
     public String toString() {
-        return "MonitorRecord{"
-                + "state=" + state
-                + ", dbType=" + dbType
-                + ", maxConnections=" + maxConnections
-                + ", maxUsedConnections=" + maxUsedConnections
-                + ", threadsConnections=" + threadsConnections
-                + ", threadsRunningConnections=" + threadsRunningConnections
-                + ", date=" + date
-                + '}';
+        return "MonitorRecord{" +
+                "state=" + state +
+                ", dbType=" + dbType +
+                ", maxConnections=" + maxConnections +
+                ", maxUsedConnections=" + maxUsedConnections +
+                ", threadsConnections=" + threadsConnections +
+                ", threadsRunningConnections=" + threadsRunningConnections +
+                ", date=" + date +
+                '}';
     }
 
     public DbType getDbType() {

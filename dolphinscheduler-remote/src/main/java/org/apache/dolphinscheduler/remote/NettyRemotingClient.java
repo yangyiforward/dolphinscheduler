@@ -17,6 +17,18 @@
 
 package org.apache.dolphinscheduler.remote;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+
+import io.netty.handler.timeout.IdleStateHandler;
 import org.apache.dolphinscheduler.remote.codec.NettyDecoder;
 import org.apache.dolphinscheduler.remote.codec.NettyEncoder;
 import org.apache.dolphinscheduler.remote.command.Command;
@@ -30,117 +42,149 @@ import org.apache.dolphinscheduler.remote.future.ReleaseSemaphore;
 import org.apache.dolphinscheduler.remote.future.ResponseFuture;
 import org.apache.dolphinscheduler.remote.handler.NettyClientHandler;
 import org.apache.dolphinscheduler.remote.processor.NettyRequestProcessor;
-import org.apache.dolphinscheduler.remote.utils.CallerThreadExecutePolicy;
-import org.apache.dolphinscheduler.remote.utils.Constants;
-import org.apache.dolphinscheduler.remote.utils.Host;
-import org.apache.dolphinscheduler.remote.utils.NamedThreadFactory;
-import org.apache.dolphinscheduler.remote.utils.NettyUtils;
+import org.apache.dolphinscheduler.remote.utils.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import lombok.extern.slf4j.Slf4j;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.timeout.IdleStateHandler;
+/**
+ * remoting netty client
+ */
+public class NettyRemotingClient {
 
-@Slf4j
-public class NettyRemotingClient implements AutoCloseable {
+    private final Logger logger = LoggerFactory.getLogger(NettyRemotingClient.class);
 
+    /**
+     * client bootstrap
+     */
     private final Bootstrap bootstrap = new Bootstrap();
 
+    /**
+     * encoder
+     */
     private final NettyEncoder encoder = new NettyEncoder();
 
-    private final ConcurrentHashMap<Host, Channel> channels = new ConcurrentHashMap<>(128);
+    /**
+     * channels
+     */
+    private final ConcurrentHashMap<Host, Channel> channels = new ConcurrentHashMap(128);
 
+    /**
+     * started flag
+     */
     private final AtomicBoolean isStarted = new AtomicBoolean(false);
 
+    /**
+     * worker group
+     */
     private final EventLoopGroup workerGroup;
 
+    /**
+     * client config
+     */
     private final NettyClientConfig clientConfig;
 
+    /**
+     * saync semaphore
+     */
     private final Semaphore asyncSemaphore = new Semaphore(200, true);
 
+    /**
+     * callback thread executor
+     */
     private final ExecutorService callbackExecutor;
 
+    /**
+     * client handler
+     */
     private final NettyClientHandler clientHandler;
 
+    /**
+     * response future executor
+     */
     private final ScheduledExecutorService responseFutureExecutor;
 
+    /**
+     * client init
+     *
+     * @param clientConfig client config
+     */
     public NettyRemotingClient(final NettyClientConfig clientConfig) {
         this.clientConfig = clientConfig;
-        if (Epoll.isAvailable()) {
-            this.workerGroup =
-                    new EpollEventLoopGroup(clientConfig.getWorkerThreads(), new NamedThreadFactory("NettyClient"));
+        if (NettyUtils.useEpoll()) {
+            this.workerGroup = new EpollEventLoopGroup(clientConfig.getWorkerThreads(), new ThreadFactory() {
+                private AtomicInteger threadIndex = new AtomicInteger(0);
+
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r, String.format("NettyClient_%d", this.threadIndex.incrementAndGet()));
+                }
+            });
         } else {
-            this.workerGroup =
-                    new NioEventLoopGroup(clientConfig.getWorkerThreads(), new NamedThreadFactory("NettyClient"));
+            this.workerGroup = new NioEventLoopGroup(clientConfig.getWorkerThreads(), new ThreadFactory() {
+                private AtomicInteger threadIndex = new AtomicInteger(0);
+
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r, String.format("NettyClient_%d", this.threadIndex.incrementAndGet()));
+                }
+            });
         }
-        this.callbackExecutor = new ThreadPoolExecutor(
-                Constants.CPUS,
-                Constants.CPUS,
-                1,
-                TimeUnit.MINUTES,
-                new LinkedBlockingQueue<>(1000),
-                new NamedThreadFactory("CallbackExecutor"),
-                new CallerThreadExecutePolicy());
+        this.callbackExecutor = new ThreadPoolExecutor(5, 10, 1, TimeUnit.MINUTES,
+            new LinkedBlockingQueue<>(1000), new NamedThreadFactory("CallbackExecutor", 10),
+            new CallerThreadExecutePolicy());
         this.clientHandler = new NettyClientHandler(this, callbackExecutor);
 
-        this.responseFutureExecutor =
-                Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ResponseFutureExecutor"));
+        this.responseFutureExecutor = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("ResponseFutureExecutor"));
 
         this.start();
     }
 
+    /**
+     * start
+     */
     private void start() {
 
         this.bootstrap
-                .group(this.workerGroup)
-                .channel(NettyUtils.getSocketChannelClass())
-                .option(ChannelOption.SO_KEEPALIVE, clientConfig.isSoKeepalive())
-                .option(ChannelOption.TCP_NODELAY, clientConfig.isTcpNoDelay())
-                .option(ChannelOption.SO_SNDBUF, clientConfig.getSendBufferSize())
-                .option(ChannelOption.SO_RCVBUF, clientConfig.getReceiveBufferSize())
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, clientConfig.getConnectTimeoutMillis())
-                .handler(new ChannelInitializer<SocketChannel>() {
-
-                    @Override
-                    public void initChannel(SocketChannel ch) {
-                        ch.pipeline()
-                                .addLast("client-idle-handler",
-                                        new IdleStateHandler(Constants.NETTY_CLIENT_HEART_BEAT_TIME, 0, 0,
-                                                TimeUnit.MILLISECONDS))
-                                .addLast(new NettyDecoder(), clientHandler, encoder);
-                    }
-                });
-        this.responseFutureExecutor.scheduleAtFixedRate(ResponseFuture::scanFutureTable, 5000, 1000,
-                TimeUnit.MILLISECONDS);
+            .group(this.workerGroup)
+            .channel(NettyUtils.getSocketChannelClass())
+            .option(ChannelOption.SO_KEEPALIVE, clientConfig.isSoKeepalive())
+            .option(ChannelOption.TCP_NODELAY, clientConfig.isTcpNoDelay())
+            .option(ChannelOption.SO_SNDBUF, clientConfig.getSendBufferSize())
+            .option(ChannelOption.SO_RCVBUF, clientConfig.getReceiveBufferSize())
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, clientConfig.getConnectTimeoutMillis())
+            .handler(new ChannelInitializer<SocketChannel>() {
+                @Override
+                public void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline()
+                            .addLast("client-idle-handler", new IdleStateHandler(Constants.NETTY_CLIENT_HEART_BEAT_TIME, 0, 0, TimeUnit.MILLISECONDS))
+                            .addLast(new NettyDecoder(), clientHandler, encoder);
+                }
+            });
+        this.responseFutureExecutor.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                ResponseFuture.scanFutureTable();
+            }
+        }, 5000, 1000, TimeUnit.MILLISECONDS);
+        //
         isStarted.compareAndSet(false, true);
     }
 
     /**
      * async send
      *
-     * @param host host
-     * @param command command
-     * @param timeoutMillis timeoutMillis
+     * @param host           host
+     * @param command        command
+     * @param timeoutMillis  timeoutMillis
      * @param invokeCallback callback function
+     * @throws InterruptedException
+     * @throws RemotingException
      */
     public void sendAsync(final Host host, final Command command,
                           final long timeoutMillis,
@@ -149,50 +193,53 @@ public class NettyRemotingClient implements AutoCloseable {
         if (channel == null) {
             throw new RemotingException("network error");
         }
-        /*
+        /**
          * request unique identification
          */
         final long opaque = command.getOpaque();
-        /*
-         * control concurrency number
+        /**
+         *  control concurrency number
          */
         boolean acquired = this.asyncSemaphore.tryAcquire(timeoutMillis, TimeUnit.MILLISECONDS);
         if (acquired) {
             final ReleaseSemaphore releaseSemaphore = new ReleaseSemaphore(this.asyncSemaphore);
 
-            /*
-             * response future
+            /**
+             *  response future
              */
             final ResponseFuture responseFuture = new ResponseFuture(opaque,
-                    timeoutMillis,
-                    invokeCallback,
-                    releaseSemaphore);
+                timeoutMillis,
+                invokeCallback,
+                releaseSemaphore);
             try {
-                channel.writeAndFlush(command).addListener(future -> {
-                    if (future.isSuccess()) {
-                        responseFuture.setSendOk(true);
-                        return;
-                    } else {
-                        responseFuture.setSendOk(false);
-                    }
-                    responseFuture.setCause(future.cause());
-                    responseFuture.putResponse(null);
-                    try {
-                        responseFuture.executeInvokeCallback();
-                    } catch (Exception ex) {
-                        log.error("execute callback error", ex);
-                    } finally {
-                        responseFuture.release();
+                channel.writeAndFlush(command).addListener(new ChannelFutureListener() {
+
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (future.isSuccess()) {
+                            responseFuture.setSendOk(true);
+                            return;
+                        } else {
+                            responseFuture.setSendOk(false);
+                        }
+                        responseFuture.setCause(future.cause());
+                        responseFuture.putResponse(null);
+                        try {
+                            responseFuture.executeInvokeCallback();
+                        } catch (Throwable ex) {
+                            logger.error("execute callback error", ex);
+                        } finally {
+                            responseFuture.release();
+                        }
                     }
                 });
-            } catch (Exception ex) {
+            } catch (Throwable ex) {
                 responseFuture.release();
                 throw new RemotingException(String.format("send command to host: %s failed", host), ex);
             }
         } else {
-            String message = String.format(
-                    "try to acquire async semaphore timeout: %d, waiting thread num: %d, total permits: %d",
-                    timeoutMillis, asyncSemaphore.getQueueLength(), asyncSemaphore.availablePermits());
+            String message = String.format("try to acquire async semaphore timeout: %d, waiting thread num: %d, total permits: %d",
+                timeoutMillis, asyncSemaphore.getQueueLength(), asyncSemaphore.availablePermits());
             throw new RemotingTooMuchRequestException(message);
         }
     }
@@ -200,31 +247,35 @@ public class NettyRemotingClient implements AutoCloseable {
     /**
      * sync send
      *
-     * @param host host
-     * @param command command
+     * @param host          host
+     * @param command       command
      * @param timeoutMillis timeoutMillis
      * @return command
+     * @throws InterruptedException
+     * @throws RemotingException
      */
-    public Command sendSync(final Host host, final Command command,
-                            final long timeoutMillis) throws InterruptedException, RemotingException {
+    public Command sendSync(final Host host, final Command command, final long timeoutMillis) throws InterruptedException, RemotingException {
         final Channel channel = getChannel(host);
         if (channel == null) {
             throw new RemotingException(String.format("connect to : %s fail", host));
         }
         final long opaque = command.getOpaque();
         final ResponseFuture responseFuture = new ResponseFuture(opaque, timeoutMillis, null, null);
-        channel.writeAndFlush(command).addListener(future -> {
-            if (future.isSuccess()) {
-                responseFuture.setSendOk(true);
-                return;
-            } else {
-                responseFuture.setSendOk(false);
+        channel.writeAndFlush(command).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    responseFuture.setSendOk(true);
+                    return;
+                } else {
+                    responseFuture.setSendOk(false);
+                }
+                responseFuture.setCause(future.cause());
+                responseFuture.putResponse(null);
+                logger.error("send command {} to host {} failed", command, host);
             }
-            responseFuture.setCause(future.cause());
-            responseFuture.putResponse(null);
-            log.error("send command {} to host {} failed", command, host);
         });
-        /*
+        /**
          * sync wait for result
          */
         Command result = responseFuture.waitResponse();
@@ -241,8 +292,9 @@ public class NettyRemotingClient implements AutoCloseable {
     /**
      * send task
      *
-     * @param host host
+     * @param host    host
      * @param command command
+     * @throws RemotingException
      */
     public void send(final Host host, final Command command) throws RemotingException {
         Channel channel = getChannel(host);
@@ -252,18 +304,15 @@ public class NettyRemotingClient implements AutoCloseable {
         try {
             ChannelFuture future = channel.writeAndFlush(command).await();
             if (future.isSuccess()) {
-                log.debug("send command : {} , to : {} successfully.", command, host.getAddress());
+                logger.debug("send command : {} , to : {} successfully.", command, host.getAddress());
             } else {
                 String msg = String.format("send command : %s , to :%s failed", command, host.getAddress());
-                log.error(msg, future.cause());
+                logger.error(msg, future.cause());
                 throw new RemotingException(msg);
             }
-        } catch (RemotingException remotingException) {
-            throw remotingException;
         } catch (Exception e) {
-            log.error("Send command {} to address {} encounter error.", command, host.getAddress());
-            throw new RemotingException(
-                    String.format("Send command : %s , to :%s encounter error", command, host.getAddress()), e);
+            logger.error("Send command {} to address {} encounter error.", command, host.getAddress());
+            throw new RemotingException(String.format("Send command : %s , to :%s encounter error", command, host.getAddress()), e);
         }
     }
 
@@ -271,7 +320,7 @@ public class NettyRemotingClient implements AutoCloseable {
      * register processor
      *
      * @param commandType command type
-     * @param processor processor
+     * @param processor   processor
      */
     public void registerProcessor(final CommandType commandType, final NettyRequestProcessor processor) {
         this.registerProcessor(commandType, processor, null);
@@ -281,16 +330,18 @@ public class NettyRemotingClient implements AutoCloseable {
      * register processor
      *
      * @param commandType command type
-     * @param processor processor
-     * @param executor thread executor
+     * @param processor   processor
+     * @param executor    thread executor
      */
-    public void registerProcessor(final CommandType commandType, final NettyRequestProcessor processor,
-                                  final ExecutorService executor) {
+    public void registerProcessor(final CommandType commandType, final NettyRequestProcessor processor, final ExecutorService executor) {
         this.clientHandler.registerProcessor(commandType, processor, executor);
     }
 
     /**
      * get channel
+     *
+     * @param host
+     * @return
      */
     public Channel getChannel(Host host) {
         Channel channel = channels.get(host);
@@ -303,7 +354,7 @@ public class NettyRemotingClient implements AutoCloseable {
     /**
      * create channel
      *
-     * @param host host
+     * @param host   host
      * @param isSync sync flag
      * @return channel
      */
@@ -322,12 +373,14 @@ public class NettyRemotingClient implements AutoCloseable {
                 return channel;
             }
         } catch (Exception ex) {
-            log.warn(String.format("connect to %s error", host), ex);
+            logger.warn(String.format("connect to %s error", host), ex);
         }
         return null;
     }
 
-    @Override
+    /**
+     * close
+     */
     public void close() {
         if (isStarted.compareAndSet(true, false)) {
             try {
@@ -341,10 +394,10 @@ public class NettyRemotingClient implements AutoCloseable {
                 if (this.responseFutureExecutor != null) {
                     this.responseFutureExecutor.shutdownNow();
                 }
-                log.info("netty client closed");
             } catch (Exception ex) {
-                log.error("netty client close exception", ex);
+                logger.error("netty client close exception", ex);
             }
+            logger.info("netty client closed");
         }
     }
 

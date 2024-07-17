@@ -18,17 +18,8 @@
 package org.apache.dolphinscheduler.api.utils;
 
 import org.apache.http.entity.ContentType;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Path;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.*;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,18 +27,32 @@ import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.*;
+
+import static org.junit.Assert.*;
+
 public class FileUtilsTest {
 
     private static final Logger logger = LoggerFactory.getLogger(FileUtilsTest.class);
 
-    @TempDir
-    public Path folder;
+    @Rule
+    public TemporaryFolder folder = null;
 
-    private String rootPath;
+    private String rootPath = null;
 
-    @BeforeEach
+    @Before
     public void setUp() throws Exception {
-        rootPath = folder.toString();
+
+        folder = new TemporaryFolder();
+        folder.create();
+
+        rootPath = folder.getRoot().getAbsolutePath();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+
+        folder.delete();
     }
 
     /**
@@ -57,54 +62,51 @@ public class FileUtilsTest {
     @Test
     public void testCopyFile() throws IOException {
 
-        // Define dest file path
-        String src = rootPath + System.getProperty("file.separator") + "src.txt";
+        //Define dest file path
         String destFilename = rootPath + System.getProperty("file.separator") + "data.txt";
-        logger.info("destFilename: " + destFilename);
+        logger.info("destFilename: "+destFilename);
 
-        // Define InputStream for MultipartFile
+        //Define InputStream for MultipartFile
         String data = "data text";
-        org.apache.commons.io.FileUtils.writeStringToFile(new File(src), data);
+        InputStream targetStream = new ByteArrayInputStream(data.getBytes());
 
-        // Use Mockito to mock MultipartFile
-        MultipartFile file = Mockito.mock(MultipartFile.class, Mockito.RETURNS_DEEP_STUBS);
-        Mockito.when(file.getInputStream()).thenReturn(new FileInputStream(src));
+        //Use Mockito to mock MultipartFile
+        MultipartFile file = Mockito.mock(MultipartFile.class);
+        Mockito.when(file.getInputStream()).thenReturn(targetStream);
 
-        // Invoke copyFile
-        FileUtils.copyInputStreamToFile(file, destFilename);
+        //Invoke copyFile
+        FileUtils.copyFile(file,destFilename);
 
-        // Test file exists
+        //Test file exists
         File destFile = new File(destFilename);
-        Assertions.assertTrue(destFile.exists());
+        assertTrue(destFile.exists());
 
     }
 
     @Test
     public void testFile2Resource() throws IOException {
 
-        // Define dest file path
-        String destFilename = rootPath + System.getProperty("file.separator") + "resource.txt";
-        logger.info("destFilename: " + destFilename);
+        //Define dest file path
+        String destFilename = rootPath + System.getProperty("file.separator") + "data.txt";
+        logger.info("destFilename: "+destFilename);
 
-        // Define test resource
-        File file = new File(destFilename);
-        org.apache.commons.io.FileUtils.writeStringToFile(file, "test data", Charset.defaultCharset());
+        //Define test resource
+        File file = folder.newFile("resource.txt");
 
-        // Invoke file2Resource and test not null
-        Resource resource = FileUtils.file2Resource(file.toString());
-        Assertions.assertNotNull(resource);
+        //Invoke file2Resource and test not null
+        Resource resource = FileUtils.file2Resource(file.getAbsolutePath());
+        assertNotNull(resource);
 
-        // Invoke file2Resource and test null
-        Resource resource1 = FileUtils.file2Resource(file + "abc");
-        Assertions.assertNull(resource1);
+        //Invoke file2Resource and test null
+        Resource resource1 = FileUtils.file2Resource(file.getAbsolutePath()+"abc");
+        assertNull(resource1);
 
     }
 
     @Test
     public void testFile2String() throws IOException {
         String content = "123";
-        org.apache.commons.io.FileUtils.writeStringToFile(new File("/tmp/task.json"), content,
-                Charset.defaultCharset());
+        org.apache.dolphinscheduler.common.utils.FileUtils.writeStringToFile(new File("/tmp/task.json"),content);
 
         File file = new File("/tmp/task.json");
         FileInputStream fileInputStream = new FileInputStream("/tmp/task.json");
@@ -113,10 +115,10 @@ public class FileUtilsTest {
 
         String resultStr = FileUtils.file2String(multipartFile);
 
-        Assertions.assertEquals(content, resultStr);
+        Assert.assertEquals(content, resultStr);
 
         boolean delete = file.delete();
 
-        Assertions.assertTrue(delete);
+        Assert.assertTrue(delete);
     }
 }

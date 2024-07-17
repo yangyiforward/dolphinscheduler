@@ -28,20 +28,14 @@ import java.util.stream.Collectors;
  * resource filter
  */
 public class ResourceFilter implements IFilter {
-
     /**
      * resource suffix
      */
-    private String suffix;
+    private Set<String> suffixs = new HashSet<>();
     /**
      * resource list
      */
     private List<Resource> resourceList;
-
-    /**
-     * parent list
-     */
-    // Set<Resource> parentList = new HashSet<>();
 
     /**
      * constructor
@@ -49,7 +43,17 @@ public class ResourceFilter implements IFilter {
      * @param resourceList  resource list
      */
     public ResourceFilter(String suffix, List<Resource> resourceList) {
-        this.suffix = suffix;
+        this.suffixs.add(suffix);
+        this.resourceList = resourceList;
+    }
+
+    /**
+     * constructor
+     * @param suffixs        resource suffixs
+     * @param resourceList  resource list
+     */
+    public ResourceFilter(Set<String> suffixs, List<Resource> resourceList) {
+        this.suffixs = suffixs;
         this.resourceList = resourceList;
     }
 
@@ -57,23 +61,30 @@ public class ResourceFilter implements IFilter {
      * file filter
      * @return file filtered by suffix
      */
-    public Set<Resource> fileFilter() {
-        return resourceList.stream().filter(t -> {
+    public Set<Resource> fileFilter(){
+        Set<Resource> resources = resourceList.stream().filter(t -> {
             String alias = t.getAlias();
-            return alias.endsWith(suffix);
+            boolean result = false;
+            for (String suffix : suffixs) {
+                if (alias.endsWith(suffix)) {
+                    result = true;
+                }
+            }
+            return result;
         }).collect(Collectors.toSet());
+        return resources;
     }
 
     /**
      * list all parent dir
      * @return parent resource dir set
      */
-    Set<Resource> listAllParent() {
-        Set<Resource> parentList = new HashSet<>();
+    Set<Resource> listAllParent(){
+        Set<Resource> parentList =  new HashSet<>();
         Set<Resource> filterFileList = fileFilter();
-        for (Resource file : filterFileList) {
+        for(Resource file:filterFileList){
             parentList.add(file);
-            setAllParent(file, parentList);
+            setAllParent(file,parentList);
         }
         return parentList;
 
@@ -84,11 +95,11 @@ public class ResourceFilter implements IFilter {
      * @param resource  resource
      * @return parent resource dir set
      */
-    private void setAllParent(Resource resource, Set<Resource> parentList) {
+    private void setAllParent(Resource resource,Set<Resource> parentList){
         for (Resource resourceTemp : resourceList) {
             if (resourceTemp.getId() == resource.getPid()) {
                 parentList.add(resourceTemp);
-                setAllParent(resourceTemp, parentList);
+                setAllParent(resourceTemp,parentList);
             }
         }
     }

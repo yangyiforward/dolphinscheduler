@@ -14,49 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.entity;
 
 import org.apache.dolphinscheduler.common.enums.UdfType;
-import org.apache.dolphinscheduler.common.utils.JSONUtils;
-
-import java.io.IOException;
-import java.util.Date;
-
-import lombok.Data;
-
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.KeyDeserializer;
-import com.google.common.base.Strings;
 
-@Data
+import java.util.Date;
+
+/**
+ * udf function
+ */
 @TableName("t_ds_udfs")
 public class UdfFunc {
-
     /**
      * id
      */
-    @TableId(value = "id", type = IdType.AUTO)
-    private Integer id;
+    @TableId(value="id", type=IdType.AUTO)
+    private int id;
     /**
      * user id
      */
     private int userId;
 
-    public String getResourceType() {
-        return resourceType;
-    }
-
-    public void setResourceType(String resourceType) {
-        this.resourceType = "UDF";
-    }
-
-    @TableField(exist = false)
-    private String resourceType = "UDF";
     /**
      * udf function name
      */
@@ -107,11 +88,102 @@ public class UdfFunc {
      */
     private Date updateTime;
 
-    /**
-     * user name
-     */
-    @TableField(exist = false)
-    private String userName;
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public String getFuncName() {
+        return funcName;
+    }
+
+    public void setFuncName(String funcName) {
+        this.funcName = funcName;
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public void setClassName(String className) {
+        this.className = className;
+    }
+
+    public String getArgTypes() {
+        return argTypes;
+    }
+
+    public void setArgTypes(String argTypes) {
+        this.argTypes = argTypes;
+    }
+
+    public String getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(String database) {
+        this.database = database;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public int getResourceId() {
+        return resourceId;
+    }
+
+    public void setResourceId(int resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    public String getResourceName() {
+        return resourceName;
+    }
+
+    public void setResourceName(String resourceName) {
+        this.resourceName = resourceName;
+    }
+
+    public UdfType getType() {
+        return type;
+    }
+
+    public void setType(UdfType type) {
+        this.type = type;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
+
+
+    public Date getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(Date updateTime) {
+        this.updateTime = updateTime;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -140,17 +212,19 @@ public class UdfFunc {
 
     @Override
     public String toString() {
-        return JSONUtils.toJsonString(this);
-    }
-
-    public static class UdfFuncDeserializer extends KeyDeserializer {
-
-        @Override
-        public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException {
-            if (Strings.isNullOrEmpty(key)) {
-                return null;
-            }
-            return JSONUtils.parseObject(key, UdfFunc.class);
-        }
+        return "UdfFunc{" +
+                "id=" + id +
+                ", userId=" + userId +
+                ", funcName='" + funcName + '\'' +
+                ", className='" + className + '\'' +
+                ", argTypes='" + argTypes + '\'' +
+                ", database='" + database + '\'' +
+                ", description='" + description + '\'' +
+                ", resourceId=" + resourceId +
+                ", resourceName='" + resourceName + '\'' +
+                ", type=" + type +
+                ", createTime=" + createTime +
+                ", updateTime=" + updateTime +
+                '}';
     }
 }

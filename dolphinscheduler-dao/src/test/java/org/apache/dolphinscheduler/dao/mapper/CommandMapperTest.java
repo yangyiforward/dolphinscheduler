@@ -14,51 +14,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.dao.mapper;
 
-import org.apache.dolphinscheduler.common.constants.Constants;
-import org.apache.dolphinscheduler.common.enums.CommandType;
-import org.apache.dolphinscheduler.common.enums.FailureStrategy;
-import org.apache.dolphinscheduler.common.enums.Flag;
-import org.apache.dolphinscheduler.common.enums.Priority;
-import org.apache.dolphinscheduler.common.enums.ReleaseState;
-import org.apache.dolphinscheduler.common.enums.TaskDependType;
-import org.apache.dolphinscheduler.common.enums.WarningType;
+import org.apache.dolphinscheduler.common.Constants;
 import org.apache.dolphinscheduler.common.utils.DateUtils;
-import org.apache.dolphinscheduler.dao.BaseDaoTest;
 import org.apache.dolphinscheduler.dao.entity.Command;
 import org.apache.dolphinscheduler.dao.entity.CommandCount;
 import org.apache.dolphinscheduler.dao.entity.ProcessDefinition;
+import org.apache.dolphinscheduler.common.enums.*;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
 /**
- * command mapper test
+ *  command mapper test
  */
-public class CommandMapperTest extends BaseDaoTest {
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@Transactional
+@Rollback(true)
+public class CommandMapperTest {
+
 
     @Autowired
-    private CommandMapper commandMapper;
+    CommandMapper commandMapper;
 
     @Autowired
-    private ProcessDefinitionMapper processDefinitionMapper;
+    ProcessDefinitionMapper processDefinitionMapper;
+
 
     /**
      * test insert
      */
     @Test
-    public void testInsert() {
+    public void testInsert(){
         Command command = createCommand();
-        Assertions.assertTrue(command.getId() > 0);
+        assertNotNull(command.getId());
+        assertThat(command.getId(),greaterThan(0));
     }
+
 
     /**
      * test select by id
@@ -66,18 +73,18 @@ public class CommandMapperTest extends BaseDaoTest {
     @Test
     public void testSelectById() {
         Command expectedCommand = createCommand();
-        // query
+        //query
         Command actualCommand = commandMapper.selectById(expectedCommand.getId());
 
-        Assertions.assertNotNull(actualCommand);
-        Assertions.assertEquals(expectedCommand.getProcessDefinitionCode(), actualCommand.getProcessDefinitionCode());
+        assertNotNull(actualCommand);
+        assertEquals(expectedCommand.getProcessDefinitionId(), actualCommand.getProcessDefinitionId());
     }
 
     /**
      * test update
      */
     @Test
-    public void testUpdate() {
+    public void testUpdate(){
 
         Command expectedCommand = createCommand();
 
@@ -88,8 +95,8 @@ public class CommandMapperTest extends BaseDaoTest {
 
         Command actualCommand = commandMapper.selectById(expectedCommand.getId());
 
-        Assertions.assertNotNull(actualCommand);
-        Assertions.assertEquals(expectedCommand.getUpdateTime(), actualCommand.getUpdateTime());
+        assertNotNull(actualCommand);
+        assertEquals(expectedCommand.getUpdateTime(),actualCommand.getUpdateTime());
 
     }
 
@@ -97,15 +104,17 @@ public class CommandMapperTest extends BaseDaoTest {
      * test delete
      */
     @Test
-    public void testDelete() {
+    public void testDelete(){
         Command expectedCommand = createCommand();
 
         commandMapper.deleteById(expectedCommand.getId());
 
         Command actualCommand = commandMapper.selectById(expectedCommand.getId());
 
-        Assertions.assertNull(actualCommand);
+        assertNull(actualCommand);
     }
+
+
 
     /**
      * test query all
@@ -116,9 +125,10 @@ public class CommandMapperTest extends BaseDaoTest {
 
         Map<Integer, Command> commandMap = createCommandMap(count);
 
+
         List<Command> actualCommands = commandMapper.selectList(null);
 
-        Assertions.assertTrue(actualCommands.size() >= count);
+        assertThat(actualCommands.size(), greaterThanOrEqualTo(count));
     }
 
     /**
@@ -129,11 +139,11 @@ public class CommandMapperTest extends BaseDaoTest {
 
         ProcessDefinition processDefinition = createProcessDefinition();
 
-        createCommand(CommandType.START_PROCESS, processDefinition.getCode());
+        Command expectedCommand = createCommand(CommandType.START_PROCESS,processDefinition.getId());
 
-        List<Command> actualCommand = commandMapper.queryCommandPage(1, 0);
+        Command actualCommand = commandMapper.getOneToRun();
 
-        Assertions.assertNotNull(actualCommand);
+        assertNotNull(actualCommand);
     }
 
     /**
@@ -145,65 +155,36 @@ public class CommandMapperTest extends BaseDaoTest {
 
         ProcessDefinition processDefinition = createProcessDefinition();
 
-        createCommandMap(count, CommandType.START_PROCESS, processDefinition.getCode());
+        CommandCount expectedCommandCount = createCommandMap(count, CommandType.START_PROCESS, processDefinition.getId());
 
-        Long[] projectCodeArray = {processDefinition.getProjectCode()};
+        Integer[] projectIdArray = {processDefinition.getProjectId()};
 
         Date startTime = DateUtils.stringToDate("2019-12-29 00:10:00");
 
         Date endTime = DateUtils.stringToDate("2019-12-29 23:59:59");
 
-        List<CommandCount> actualCommandCounts = commandMapper.countCommandState(startTime, endTime, projectCodeArray);
+        List<CommandCount> actualCommandCounts = commandMapper.countCommandState(0, startTime, endTime, projectIdArray);
 
-        Assertions.assertTrue(actualCommandCounts.size() >= 1);
+        assertThat(actualCommandCounts.size(),greaterThanOrEqualTo(1));
     }
 
-    /**
-     * test query command page by slot
-     */
-    @Test
-    public void testQueryCommandPageBySlot() {
-        int masterCount = 4;
-        int thisMasterSlot = 2;
-        // for hit or miss
-        toTestQueryCommandPageBySlot(masterCount, thisMasterSlot);
-        toTestQueryCommandPageBySlot(masterCount, thisMasterSlot);
-        toTestQueryCommandPageBySlot(masterCount, thisMasterSlot);
-        toTestQueryCommandPageBySlot(masterCount, thisMasterSlot);
-    }
-
-    private boolean toTestQueryCommandPageBySlot(int masterCount, int thisMasterSlot) {
-        Command command = createCommand();
-        Integer id = command.getId();
-        boolean hit = id % masterCount == thisMasterSlot;
-        List<Command> commandList = commandMapper.queryCommandPageBySlot(1, masterCount, thisMasterSlot);
-        if (hit) {
-            Assertions.assertEquals(id, commandList.get(0).getId());
-        } else {
-            commandList.forEach(o -> {
-                Assertions.assertNotEquals(id, o.getId());
-                Assertions.assertEquals(thisMasterSlot, o.getId() % masterCount);
-            });
-        }
-        return hit;
-    }
 
     /**
      * create command map
      * @param count map count
      * @param commandType comman type
-     * @param processDefinitionCode process definition code
+     * @param processDefinitionId process definition id
      * @return command map
      */
     private CommandCount createCommandMap(
-                                          Integer count,
-                                          CommandType commandType,
-                                          long processDefinitionCode) {
+            Integer count,
+            CommandType commandType,
+            Integer processDefinitionId){
 
         CommandCount commandCount = new CommandCount();
 
-        for (int i = 0; i < count; i++) {
-            createCommand(commandType, processDefinitionCode);
+        for (int i = 0 ;i < count ;i++){
+            createCommand(commandType,processDefinitionId);
         }
         commandCount.setCommandType(commandType);
         commandCount.setCount(count);
@@ -215,15 +196,12 @@ public class CommandMapperTest extends BaseDaoTest {
      *  create process definition
      * @return process definition
      */
-    private ProcessDefinition createProcessDefinition() {
+    private ProcessDefinition createProcessDefinition(){
         ProcessDefinition processDefinition = new ProcessDefinition();
-        processDefinition.setCode(1L);
         processDefinition.setReleaseState(ReleaseState.ONLINE);
         processDefinition.setName("ut test");
-        processDefinition.setProjectCode(1L);
+        processDefinition.setProjectId(1);
         processDefinition.setFlag(Flag.YES);
-        processDefinition.setCreateTime(new Date());
-        processDefinition.setUpdateTime(new Date());
 
         processDefinitionMapper.insert(processDefinition);
 
@@ -235,33 +213,34 @@ public class CommandMapperTest extends BaseDaoTest {
      * @param count map count
      * @return command map
      */
-    private Map<Integer, Command> createCommandMap(Integer count) {
-        Map<Integer, Command> commandMap = new HashMap<>();
+    private Map<Integer,Command> createCommandMap(Integer count){
+        Map<Integer,Command> commandMap = new HashMap<>();
 
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < count ;i++){
             Command command = createCommand();
-            commandMap.put(command.getId(), command);
+            commandMap.put(command.getId(),command);
         }
         return commandMap;
     }
+
 
     /**
      * create command
      * @return
      */
-    private Command createCommand() {
-        return createCommand(CommandType.START_PROCESS, 1);
+    private Command createCommand(){
+        return createCommand(CommandType.START_PROCESS,1);
     }
 
     /**
      * create command
      * @return Command
      */
-    private Command createCommand(CommandType commandType, long processDefinitionCode) {
+    private Command createCommand(CommandType commandType,Integer processDefinitionId){
 
         Command command = new Command();
         command.setCommandType(commandType);
-        command.setProcessDefinitionCode(processDefinitionCode);
+        command.setProcessDefinitionId(processDefinitionId);
         command.setExecutorId(4);
         command.setCommandParam("test command param");
         command.setTaskDependType(TaskDependType.TASK_ONLY);
@@ -273,11 +252,11 @@ public class CommandMapperTest extends BaseDaoTest {
         command.setStartTime(DateUtils.stringToDate("2019-12-29 10:10:00"));
         command.setUpdateTime(DateUtils.stringToDate("2019-12-29 10:10:00"));
         command.setWorkerGroup(Constants.DEFAULT_WORKER_GROUP);
-        command.setProcessInstanceId(0);
-        command.setProcessDefinitionVersion(0);
         commandMapper.insert(command);
 
         return command;
     }
+
+
 
 }

@@ -14,59 +14,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dolphinscheduler.remote.utils;
 
 import org.apache.dolphinscheduler.common.utils.NetUtils;
 
 import java.net.InetSocketAddress;
 
-import lombok.extern.slf4j.Slf4j;
 import io.netty.channel.Channel;
 
 /**
- * channel utils
+ *  channel utils
  */
-@Slf4j
 public class ChannelUtils {
 
-    private ChannelUtils() {
-        throw new IllegalStateException(ChannelUtils.class.getName());
-    }
-
     /**
-     * get local address
+     *  get local address
      *
      * @param channel channel
      * @return local address
      */
-    public static String getLocalAddress(Channel channel) {
-        return NetUtils.getHost(((InetSocketAddress) channel.localAddress()).getAddress());
+    public static String getLocalAddress(Channel channel){
+        return NetUtils.getHost(((InetSocketAddress)channel.localAddress()).getAddress());
     }
 
     /**
-     * get remote address
-     *
+     *  get remote address
      * @param channel channel
      * @return remote address
      */
-    public static String getRemoteAddress(Channel channel) {
-        return toAddress(channel).getAddress();
+    public static String getRemoteAddress(Channel channel){
+        return NetUtils.getHost(((InetSocketAddress)channel.remoteAddress()).getAddress());
     }
 
     /**
-     * channel to address
-     *
+     *  channel to address
      * @param channel channel
      * @return address
      */
-    public static Host toAddress(Channel channel) {
-        InetSocketAddress socketAddress = ((InetSocketAddress) channel.remoteAddress());
-        if (socketAddress == null) {
-            // the remote channel already closed
-            log.warn("The channel is already closed");
-            return Host.EMPTY;
-        }
+    public static Host toAddress(Channel channel){
+        InetSocketAddress socketAddress = ((InetSocketAddress)channel.remoteAddress());
         return new Host(NetUtils.getHost(socketAddress.getAddress()), socketAddress.getPort());
     }
 
